@@ -30,7 +30,16 @@ Decimal phases appear between their surrounding integers in numeric order.
 3. Cloning the repo and running `yarn install` succeeds without network access — no `node_modules/` directory exists, `.yarn/cache/` is committed, `.pnp.cjs` resolves all dependencies
 4. `index.html` contains no CDN `<script>` or `<link>` tags for d3, vis, box2d, or seedrandom — a single `<script type="module">` entry point loads the entire app
 5. All Box2D globals (`b2Vec2`, `b2World`, etc.) are accessible in the browser console after page load — `typeof b2Vec2 === 'function'` returns true in both dev and production builds
-   **Plans**: TBD
+
+**Plans**: 5 plans
+
+Plans:
+
+- [ ] 01-01-PLAN.md — Yarn PnP foundation: fix .gitignore, initialize Yarn Berry 4.13.0, install Vite 6.4.1
+- [ ] 01-02-PLAN.md — Vite config + box2d ESM wrapper + src/main.js entry point
+- [ ] 01-03-PLAN.md — index.html migration: remove CDN tags, add module script entry
+- [ ] 01-04-PLAN.md — Bug fixes: declare cw_runningInterval, add Watch Leader disabled guard
+- [ ] 01-05-PLAN.md — Smoke test + acceptance: yarn dev, yarn build, yarn preview, git commit
 
 ### Phase 2: Vitest Foundation
 
@@ -52,5 +61,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase                | Plans Complete | Status      | Completed |
 | -------------------- | -------------- | ----------- | --------- |
-| 1. Vite Foundation   | 0/?            | Not started | -         |
+| 1. Vite Foundation   | 0/5            | Not started | -         |
 | 2. Vitest Foundation | 0/?            | Not started | -         |
