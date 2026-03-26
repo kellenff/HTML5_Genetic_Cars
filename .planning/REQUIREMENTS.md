@@ -54,11 +54,25 @@
 
 ## Traceability
 
-| REQ-ID              | Phase   | Plan |
-| ------------------- | ------- | ---- |
-| BUILD-01 – BUILD-07 | Phase 1 | —    |
-| DEP-01 – DEP-07     | Phase 1 | —    |
-| FIX-01              | Phase 1 | —    |
-| TEST-01 – TEST-05   | Phase 2 | —    |
-
-_(Filled by roadmapper)_
+| Requirement | Phase   | Status  |
+| ----------- | ------- | ------- |
+| BUILD-01    | Phase 1 | Pending |
+| BUILD-02    | Phase 1 | Pending |
+| BUILD-03    | Phase 1 | Pending |
+| BUILD-04    | Phase 1 | Pending |
+| BUILD-05    | Phase 1 | Pending |
+| BUILD-06    | Phase 1 | Pending |
+| BUILD-07    | Phase 1 | Pending |
+| DEP-01      | Phase 1 | Pending |
+| DEP-02      | Phase 1 | Pending |
+| DEP-03      | Phase 1 | Pending |
+| DEP-04      | Phase 1 | Pending |
+| DEP-05      | Phase 1 | Pending |
+| DEP-06      | Phase 1 | Pending |
+| DEP-07      | Phase 1 | Pending |
+| FIX-01      | Phase 1 | Pending |
+| TEST-01     | Phase 2 | Pending |
+| TEST-02     | Phase 2 | Pending |
+| TEST-03     | Phase 2 | Pending |
+| TEST-04     | Phase 2 | Pending |
+| TEST-05     | Phase 2 | Pending |
