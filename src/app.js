@@ -3,38 +3,52 @@
  * Open index.html directly in a browser.
  * ========================================================================== */
 (function () {
-
   /* -------------------------------------------------------------------------
    * machine-learning/random.js
    * ------------------------------------------------------------------------- */
 
-
   const random = {
     shuffleIntegers(prop, generator) {
-      return random.mapToShuffle(prop, random.createNormals({
-        length: prop.length || 10,
-        inclusive: true,
-      }, generator));
+      return random.mapToShuffle(
+        prop,
+        random.createNormals(
+          {
+            length: prop.length || 10,
+            inclusive: true,
+          },
+          generator,
+        ),
+      );
     },
     createIntegers(prop, generator) {
-      return random.mapToInteger(prop, random.createNormals({
-        length: prop.length,
-        inclusive: true,
-      }, generator));
+      return random.mapToInteger(
+        prop,
+        random.createNormals(
+          {
+            length: prop.length,
+            inclusive: true,
+          },
+          generator,
+        ),
+      );
     },
     createFloats(prop, generator) {
-      return random.mapToFloat(prop, random.createNormals({
-        length: prop.length,
-        inclusive: true,
-      }, generator));
+      return random.mapToFloat(
+        prop,
+        random.createNormals(
+          {
+            length: prop.length,
+            inclusive: true,
+          },
+          generator,
+        ),
+      );
     },
     createNormals(prop, generator) {
       var l = prop.length;
       var values = [];
       for (var i = 0; i < l; i++) {
-        values.push(
-          createNormal(prop, generator)
-        );
+        values.push(createNormal(prop, generator));
       }
       return values;
     },
@@ -44,18 +58,21 @@
       var sorted = normals.slice().sort(function (a, b) {
         return a - b;
       });
-      return normals.map(function (val) {
-        return sorted.indexOf(val);
-      }).map(function (i) {
-        return i + offset;
-      }).slice(0, limit);
+      return normals
+        .map(function (val) {
+          return sorted.indexOf(val);
+        })
+        .map(function (i) {
+          return i + offset;
+        })
+        .slice(0, limit);
     },
     mapToInteger(prop, normals) {
       prop = {
         min: prop.min || 0,
         range: prop.range || 10,
-        length: prop.length
-      }
+        length: prop.length,
+      };
       return random.mapToFloat(prop, normals).map(function (float) {
         return Math.round(float);
       });
@@ -63,15 +80,21 @@
     mapToFloat(prop, normals) {
       prop = {
         min: prop.min || 0,
-        range: prop.range || 1
-      }
+        range: prop.range || 1,
+      };
       return normals.map(function (normal) {
         var min = prop.min;
         var range = prop.range;
-        return min + normal * range
-      })
+        return min + normal * range;
+      });
     },
-    mutateReplace(prop, generator, originalValues, mutation_range, chanceToMutate) {
+    mutateReplace(
+      prop,
+      generator,
+      originalValues,
+      mutation_range,
+      chanceToMutate,
+    ) {
       var factor = (prop.factor || 1) * mutation_range;
       return originalValues.map(function (originalValue) {
         if (generator() > chanceToMutate) {
@@ -79,8 +102,8 @@
         }
 
         // Calculate bounds based on the factor, centered around the original value
-        var minBound = Math.max(0, originalValue - (factor / 2));
-        var maxBound = Math.min(1, originalValue + (factor / 2));
+        var minBound = Math.max(0, originalValue - factor / 2);
+        var maxBound = Math.min(1, originalValue + factor / 2);
 
         // Pick a completely random flat value within those bounds
         // Fallback to 0-1 if factor is >= 1 (100% mutation size)
@@ -91,112 +114,126 @@
 
         var rangeValue = createNormal({ inclusive: true }, generator);
         // Map [0, 1] to [minBound, maxBound]
-        return minBound + (rangeValue * (maxBound - minBound));
+        return minBound + rangeValue * (maxBound - minBound);
       });
-    }
+    },
   };
 
-
-
-function createNormal(prop, generator) {
+  function createNormal(prop, generator) {
     if (!prop.inclusive) {
       return generator();
     } else {
-      return generator() < 0.5 ?
-        generator() :
-        1 - generator();
+      return generator() < 0.5 ? generator() : 1 - generator();
     }
   }
-
 
   /* -------------------------------------------------------------------------
    * machine-learning/create-instance.js
    * ------------------------------------------------------------------------- */
 
-
   var createInstance = {
     createGenerationZero(schema, generator) {
-      return Object.keys(schema).reduce(function (instance, key) {
-        var schemaProp = schema[key];
-        var values = random.createNormals(schemaProp, generator);
-        instance[key] = values;
-        return instance;
-      }, { id: Math.random().toString(32) });
+      return Object.keys(schema).reduce(
+        function (instance, key) {
+          var schemaProp = schema[key];
+          var values = random.createNormals(schemaProp, generator);
+          instance[key] = values;
+          return instance;
+        },
+        { id: Math.random().toString(32) },
+      );
     },
     createCrossBreed(schema, parents, parentChooser) {
       var id = Math.random().toString(32);
-      return Object.keys(schema).reduce(function (crossDef, key) {
-        var schemaDef = schema[key];
-        var values = [];
-        for (var i = 0, l = schemaDef.length; i < l; i++) {
-          var p = parentChooser(id, key, parents);
-          values.push(parents[p][key][i]);
-        }
-        crossDef[key] = values;
-        return crossDef;
-      }, {
-        id: id,
-        ancestry: parents.map(function (parent) {
-          return {
-            id: parent.id,
-            ancestry: parent.ancestry,
-          };
-        })
-      });
+      return Object.keys(schema).reduce(
+        function (crossDef, key) {
+          var schemaDef = schema[key];
+          var values = [];
+          for (var i = 0, l = schemaDef.length; i < l; i++) {
+            var p = parentChooser(id, key, parents);
+            values.push(parents[p][key][i]);
+          }
+          crossDef[key] = values;
+          return crossDef;
+        },
+        {
+          id: id,
+          ancestry: parents.map(function (parent) {
+            return {
+              id: parent.id,
+              ancestry: parent.ancestry,
+            };
+          }),
+        },
+      );
     },
     createMutatedClone(schema, generator, parent, factor, chanceToMutate) {
       var mutateFn = random.mutateReplace;
-      return Object.keys(schema).reduce(function (clone, key) {
-        var schemaProp = schema[key];
-        var originalValues = parent[key];
-        var values = mutateFn(
-          schemaProp, generator, originalValues, factor, chanceToMutate
-        );
-        clone[key] = values;
-        return clone;
-      }, {
-        id: parent.id,
-        ancestry: parent.ancestry
-      });
+      return Object.keys(schema).reduce(
+        function (clone, key) {
+          var schemaProp = schema[key];
+          var originalValues = parent[key];
+          var values = mutateFn(
+            schemaProp,
+            generator,
+            originalValues,
+            factor,
+            chanceToMutate,
+          );
+          clone[key] = values;
+          return clone;
+        },
+        {
+          id: parent.id,
+          ancestry: parent.ancestry,
+        },
+      );
     },
     applyTypes(schema, parent) {
-      return Object.keys(schema).reduce(function (clone, key) {
-        var schemaProp = schema[key];
-        var originalValues = parent[key];
-        var values;
-        switch (schemaProp.type) {
-          case "shuffle":
-            values = random.mapToShuffle(schemaProp, originalValues); break;
-          case "float":
-            values = random.mapToFloat(schemaProp, originalValues); break;
-          case "integer":
-            values = random.mapToInteger(schemaProp, originalValues); break;
-          default:
-            throw new Error(`Unknown type ${schemaProp.type} of schema for key ${key}`);
-        }
-        clone[key] = values;
-        return clone;
-      }, {
-        id: parent.id,
-        ancestry: parent.ancestry
-      });
+      return Object.keys(schema).reduce(
+        function (clone, key) {
+          var schemaProp = schema[key];
+          var originalValues = parent[key];
+          var values;
+          switch (schemaProp.type) {
+            case "shuffle":
+              values = random.mapToShuffle(schemaProp, originalValues);
+              break;
+            case "float":
+              values = random.mapToFloat(schemaProp, originalValues);
+              break;
+            case "integer":
+              values = random.mapToInteger(schemaProp, originalValues);
+              break;
+            default:
+              throw new Error(
+                `Unknown type ${schemaProp.type} of schema for key ${key}`,
+              );
+          }
+          clone[key] = values;
+          return clone;
+        },
+        {
+          id: parent.id,
+          ancestry: parent.ancestry,
+        },
+      );
     },
-  }
-
+  };
 
   /* -------------------------------------------------------------------------
    * car-schema/car-constants.json (inlined)
    * ------------------------------------------------------------------------- */
   var carConstantsData = {
-    "wheelCount": 2,
-    "wheelMinRadius": 0.2,
-    "wheelRadiusRange": 0.5,
-    "wheelMinDensity": 40,
-    "wheelDensityRange": 100,
-    "chassisDensityRange": 300,
-    "chassisMinDensity": 30,
-    "chassisMinAxis": 0.1,
-    "chassisAxisRange": 1.1
+    wheelCount: 2,
+    wheelMinRadius: 0.2,
+    wheelRadiusRange: 0.5,
+    wheelMinDensity: 40,
+    wheelDensityRange: 100,
+    chassisDensityRange: 300,
+    chassisMinDensity: 30,
+    chassisMinAxis: 0.1,
+    chassisAxisRange: 1.1,
   };
 
   /* -------------------------------------------------------------------------
@@ -209,25 +246,64 @@ function createNormal(prop, generator) {
     function worldDef() {
       var box2dfps = 60;
       return {
-        gravity: { y: 0 }, doSleep: true, floorseed: "abc",
-        maxFloorTiles: 200, mutable_floor: false, motorSpeed: 20,
-        box2dfps: box2dfps, max_car_health: box2dfps * 10,
-        tileDimensions: { width: 1.5, height: 0.15 }
+        gravity: { y: 0 },
+        doSleep: true,
+        floorseed: "abc",
+        maxFloorTiles: 200,
+        mutable_floor: false,
+        motorSpeed: 20,
+        box2dfps: box2dfps,
+        max_car_health: box2dfps * 10,
+        tileDimensions: { width: 1.5, height: 0.15 },
       };
     }
-    function getCarConstants() { return carConstants; }
+    function getCarConstants() {
+      return carConstants;
+    }
     function generateSchema(values) {
       return {
-        wheel_radius: { type: "float", length: values.wheelCount, min: values.wheelMinRadius, range: values.wheelRadiusRange, factor: 1 },
-        wheel_density: { type: "float", length: values.wheelCount, min: values.wheelMinDensity, range: values.wheelDensityRange, factor: 1 },
-        chassis_density: { type: "float", length: 1, min: values.chassisDensityRange, range: values.chassisMinDensity, factor: 1 },
-        vertex_list: { type: "float", length: 12, min: values.chassisMinAxis, range: values.chassisAxisRange, factor: 1 },
-        wheel_vertex: { type: "shuffle", length: 8, limit: values.wheelCount, factor: 1 },
+        wheel_radius: {
+          type: "float",
+          length: values.wheelCount,
+          min: values.wheelMinRadius,
+          range: values.wheelRadiusRange,
+          factor: 1,
+        },
+        wheel_density: {
+          type: "float",
+          length: values.wheelCount,
+          min: values.wheelMinDensity,
+          range: values.wheelDensityRange,
+          factor: 1,
+        },
+        chassis_density: {
+          type: "float",
+          length: 1,
+          min: values.chassisDensityRange,
+          range: values.chassisMinDensity,
+          factor: 1,
+        },
+        vertex_list: {
+          type: "float",
+          length: 12,
+          min: values.chassisMinAxis,
+          range: values.chassisAxisRange,
+          factor: 1,
+        },
+        wheel_vertex: {
+          type: "shuffle",
+          length: 8,
+          limit: values.wheelCount,
+          factor: 1,
+        },
       };
     }
-    return { worldDef: worldDef, carConstants: getCarConstants, generateSchema: generateSchema };
+    return {
+      worldDef: worldDef,
+      carConstants: getCarConstants,
+      generateSchema: generateSchema,
+    };
   })();
-
 
   /* -------------------------------------------------------------------------
    * car-schema/def-to-car.js
@@ -236,15 +312,13 @@ function createNormal(prop, generator) {
     globals b2RevoluteJointDef b2Vec2 b2BodyDef b2Body b2FixtureDef b2PolygonShape b2CircleShape
   */
 
-
-
-
-
   function defToCar(normal_def, world, constants) {
-    var car_def = createInstance.applyTypes(constants.schema, normal_def)
+    var car_def = createInstance.applyTypes(constants.schema, normal_def);
     var instance = {};
     instance.chassis = createChassis(
-      world, car_def.vertex_list, car_def.chassis_density
+      world,
+      car_def.vertex_list,
+      car_def.chassis_density,
     );
     var i;
 
@@ -255,7 +329,7 @@ function createNormal(prop, generator) {
       instance.wheels[i] = createWheel(
         world,
         car_def.wheel_radius[i],
-        car_def.wheel_density[i]
+        car_def.wheel_density[i],
       );
     }
 
@@ -267,7 +341,7 @@ function createNormal(prop, generator) {
     var joint_def = new b2RevoluteJointDef();
 
     for (i = 0; i < wheelCount; i++) {
-      var torque = carmass * -constants.gravity.y / car_def.wheel_radius[i];
+      var torque = (carmass * -constants.gravity.y) / car_def.wheel_radius[i];
 
       var randvertex = instance.chassis.vertex_list[car_def.wheel_vertex[i]];
       joint_def.localAnchorA.Set(randvertex.x, randvertex.y);
@@ -284,7 +358,6 @@ function createNormal(prop, generator) {
   }
 
   function createChassis(world, vertexs, density) {
-
     var vertex_list = new Array();
     vertex_list.push(new b2Vec2(vertexs[0], 0));
     vertex_list.push(new b2Vec2(vertexs[1], vertexs[2]));
@@ -314,7 +387,6 @@ function createNormal(prop, generator) {
 
     return body;
   }
-
 
   function createChassisPart(body, vertex1, vertex2, density) {
     var vertex_list = new Array();
@@ -350,11 +422,9 @@ function createNormal(prop, generator) {
     return body;
   }
 
-
   /* -------------------------------------------------------------------------
    * car-schema/run.js
    * ------------------------------------------------------------------------- */
-
 
   var carRun = {
     getInitialState: getInitialState,
@@ -386,9 +456,12 @@ function createNormal(prop, generator) {
     // check if car reached end of the path
     var nextState = {
       frames: state.frames + 1,
-      maxPositionx: position.x > state.maxPositionx ? position.x : state.maxPositionx,
-      maxPositiony: position.y > state.maxPositiony ? position.y : state.maxPositiony,
-      minPositiony: position.y < state.minPositiony ? position.y : state.minPositiony
+      maxPositionx:
+        position.x > state.maxPositionx ? position.x : state.maxPositionx,
+      maxPositiony:
+        position.y > state.maxPositiony ? position.y : state.maxPositiony,
+      minPositiony:
+        position.y < state.minPositiony ? position.y : state.minPositiony,
     };
 
     if (position.x > constants.finishLine) {
@@ -429,10 +502,9 @@ function createNormal(prop, generator) {
       s: avgspeed,
       x: position,
       y: state.maxPositiony,
-      y2: state.minPositiony
-    }
+      y2: state.minPositiony,
+    };
   }
-
 
   /* -------------------------------------------------------------------------
    * generation-config/selectFromAllParents.js
@@ -453,20 +525,18 @@ function createNormal(prop, generator) {
     return parentIndex;
   }
 
-
   /* -------------------------------------------------------------------------
    * generation-config/pickParent.js
    * ------------------------------------------------------------------------- */
   var nAttributes = 15;
 
-
   function pickParent(currentChoices, chooseId, key /* , parents */) {
     if (!currentChoices.has(chooseId)) {
-      currentChoices.set(chooseId, initializePick())
+      currentChoices.set(chooseId, initializePick());
     }
 
     var state = currentChoices.get(chooseId);
-    state.i++
+    state.i++;
     if (["wheel_radius", "wheel_vertex", "wheel_density"].indexOf(key) > -1) {
       state.curparent = cw_chooseParent(state);
       return state.curparent;
@@ -477,42 +547,39 @@ function createNormal(prop, generator) {
     function cw_chooseParent(state) {
       var curparent = state.curparent;
       var attributeIndex = state.i;
-      var swapPoint1 = state.swapPoint1
-      var swapPoint2 = state.swapPoint2
-      if ((swapPoint1 == attributeIndex) || (swapPoint2 == attributeIndex)) {
-        return curparent == 1 ? 0 : 1
+      var swapPoint1 = state.swapPoint1;
+      var swapPoint2 = state.swapPoint2;
+      if (swapPoint1 == attributeIndex || swapPoint2 == attributeIndex) {
+        return curparent == 1 ? 0 : 1;
       }
-      return curparent
+      return curparent;
     }
 
     function initializePick() {
       var curparent = 0;
 
-      var swapPoint1 = Math.floor(Math.random() * (nAttributes));
+      var swapPoint1 = Math.floor(Math.random() * nAttributes);
       var swapPoint2 = swapPoint1;
       while (swapPoint2 == swapPoint1) {
-        swapPoint2 = Math.floor(Math.random() * (nAttributes));
+        swapPoint2 = Math.floor(Math.random() * nAttributes);
       }
       var i = 0;
       return {
         curparent: curparent,
         i: i,
         swapPoint1: swapPoint1,
-        swapPoint2: swapPoint2
-      }
+        swapPoint2: swapPoint2,
+      };
     }
   }
-
 
   /* -------------------------------------------------------------------------
    * generation-config/generateRandom.js
    * ------------------------------------------------------------------------- */
 
-
   function generateRandom() {
     return Math.random();
   }
-
 
   /* -------------------------------------------------------------------------
    * generation-config/index.js
@@ -522,8 +589,11 @@ function createNormal(prop, generator) {
     var carConstants = carConstruct.carConstants();
     var schema = carConstruct.generateSchema(carConstants);
     var constants = {
-      generationSize: 20, schema: schema, championLength: 1,
-      mutation_range: 1, gen_mutation: 0.05
+      generationSize: 20,
+      schema: schema,
+      championLength: 1,
+      mutation_range: 1,
+      gen_mutation: 0.05,
     };
     var fn = function () {
       var currentChoices = new Map();
@@ -537,14 +607,11 @@ function createNormal(prop, generator) {
     return fn;
   })();
 
-
   /* -------------------------------------------------------------------------
    * machine-learning/genetic-algorithm/manage-round.js
    * ------------------------------------------------------------------------- */
   var manageRound = (function () {
     var create = createInstance;
-
-
 
     function generationZero(config) {
       var generationSize = config.generationSize,
@@ -552,7 +619,7 @@ function createNormal(prop, generator) {
       var cw_carGeneration = [];
       for (var k = 0; k < generationSize; k++) {
         var def = create.createGenerationZero(schema, function () {
-          return Math.random()
+          return Math.random();
         });
         def.index = k;
         cw_carGeneration.push(def);
@@ -563,11 +630,7 @@ function createNormal(prop, generator) {
       };
     }
 
-    function nextGeneration(
-      previousState,
-      scores,
-      config
-    ) {
+    function nextGeneration(previousState, scores, config) {
       var champion_length = config.championLength,
         generationSize = config.generationSize,
         selectFromAllParents = config.selectFromAllParents;
@@ -575,7 +638,7 @@ function createNormal(prop, generator) {
       var newGeneration = new Array();
       var newborn;
       for (var k = 0; k < champion_length; k++) {
-        ``
+        ``;
         scores[k].def.is_elite = true;
         scores[k].def.index = k;
         newGeneration.push(scores[k].def);
@@ -587,10 +650,13 @@ function createNormal(prop, generator) {
         while (parent2 == parent1) {
           parent2 = selectFromAllParents(scores, parentList, parent1);
         }
-        var pair = [parent1, parent2]
+        var pair = [parent1, parent2];
         parentList.push(pair);
-        newborn = makeChild(config,
-          pair.map(function (parent) { return scores[parent].def; })
+        newborn = makeChild(
+          config,
+          pair.map(function (parent) {
+            return scores[parent].def;
+          }),
         );
         newborn = mutate(config, newborn);
         newborn.is_elite = false;
@@ -604,13 +670,11 @@ function createNormal(prop, generator) {
       };
     }
 
-
     function makeChild(config, parents) {
       var schema = config.schema,
         pickParent = config.pickParent;
-      return create.createCrossBreed(schema, parents, pickParent)
+      return create.createCrossBreed(schema, parents, pickParent);
     }
-
 
     function mutate(config, parent) {
       var schema = config.schema,
@@ -622,13 +686,12 @@ function createNormal(prop, generator) {
         generateRandom,
         parent,
         Math.max(mutation_range),
-        gen_mutation
-      )
+        gen_mutation,
+      );
     }
 
     return { generationZero: generationZero, nextGeneration: nextGeneration };
   })();
-
 
   /* -------------------------------------------------------------------------
    * machine-learning/simulated-annealing/manage-round.js
@@ -636,11 +699,10 @@ function createNormal(prop, generator) {
   var manageRoundSA = (function () {
     var create = createInstance;
 
-
-
     function generationZero(config) {
       var oldStructure = create.createGenerationZero(
-        config.schema, config.generateRandom
+        config.schema,
+        config.generateRandom,
       );
       var newStructure = createStructure(config, 1, oldStructure);
 
@@ -649,14 +711,16 @@ function createNormal(prop, generator) {
       return {
         counter: 0,
         k: k,
-        generation: [newStructure, oldStructure]
-      }
+        generation: [newStructure, oldStructure],
+      };
     }
 
     function nextGeneration(previousState, scores, config) {
       var nextState = {
         k: (previousState.k + 1) % config.generationSize,
-        counter: previousState.counter + (previousState.k === config.generationSize ? 1 : 0)
+        counter:
+          previousState.counter +
+          (previousState.k === config.generationSize ? 1 : 0),
       };
       // gradually get closer to zero temperature (but never hit it)
       var oldDef = previousState.curDef || previousState.generation[1];
@@ -664,7 +728,6 @@ function createNormal(prop, generator) {
 
       var newDef = previousState.generation[0];
       var newScore = scores[0].score.v;
-
 
       var temp = Math.pow(Math.E, -nextState.counter / config.generationSize);
 
@@ -682,12 +745,10 @@ function createNormal(prop, generator) {
         nextState.score = oldScore;
       }
 
-
       nextState.generation = [createStructure(config, temp, nextState.curDef)];
 
       return nextState;
     }
-
 
     function createStructure(config, mutation_range, parent) {
       var schema = config.schema,
@@ -698,13 +759,12 @@ function createNormal(prop, generator) {
         generateRandom,
         parent,
         mutation_range,
-        gen_mutation
-      )
+        gen_mutation,
+      );
     }
 
     return { generationZero: generationZero, nextGeneration: nextGeneration };
   })();
-
 
   /* -------------------------------------------------------------------------
    * ghost/car-to-ghost.js
@@ -714,7 +774,7 @@ function createNormal(prop, generator) {
     var out = {
       chassis: ghost_get_chassis(car.chassis),
       wheels: [],
-      pos: { x: car.chassis.GetPosition().x, y: car.chassis.GetPosition().y }
+      pos: { x: car.chassis.GetPosition().x, y: car.chassis.GetPosition().y },
     };
 
     for (var i = 0; i < car.wheels.length; i++) {
@@ -732,8 +792,8 @@ function createNormal(prop, generator) {
 
       var p = {
         vtx: [],
-        num: 0
-      }
+        num: 0,
+      };
 
       p.num = s.m_vertexCount;
 
@@ -756,8 +816,8 @@ function createNormal(prop, generator) {
       var c = {
         pos: w.GetWorldPoint(s.m_p),
         rad: s.m_radius,
-        ang: w.m_sweep.a
-      }
+        ang: w.m_sweep.a,
+      };
 
       gw.push(c);
     }
@@ -765,80 +825,60 @@ function createNormal(prop, generator) {
     return gw;
   }
 
-
   /* -------------------------------------------------------------------------
    * ghost/index.js
    * ------------------------------------------------------------------------- */
   var ghost_fns = (function () {
     var enable_ghost = true;
 
-
-
-
-
-
-
     function ghost_create_replay() {
-      if (!enable_ghost)
-        return null;
+      if (!enable_ghost) return null;
 
       return {
         num_frames: 0,
         frames: [],
-      }
+      };
     }
 
     function ghost_create_ghost() {
-      if (!enable_ghost)
-        return null;
+      if (!enable_ghost) return null;
 
       return {
         replay: null,
         frame: 0,
-        dist: -100
-      }
+        dist: -100,
+      };
     }
 
     function ghost_reset_ghost(ghost) {
-      if (!enable_ghost)
-        return;
-      if (ghost == null)
-        return;
+      if (!enable_ghost) return;
+      if (ghost == null) return;
       ghost.frame = 0;
     }
 
     function ghost_pause(ghost) {
-      if (ghost != null)
-        ghost.old_frame = ghost.frame;
+      if (ghost != null) ghost.old_frame = ghost.frame;
       ghost_reset_ghost(ghost);
     }
 
     function ghost_resume(ghost) {
-      if (ghost != null)
-        ghost.frame = ghost.old_frame;
+      if (ghost != null) ghost.frame = ghost.old_frame;
     }
 
     function ghost_get_position(ghost) {
-      if (!enable_ghost)
-        return;
-      if (ghost == null)
-        return;
-      if (ghost.frame < 0)
-        return;
-      if (ghost.replay == null)
-        return;
+      if (!enable_ghost) return;
+      if (ghost == null) return;
+      if (ghost.frame < 0) return;
+      if (ghost.replay == null) return;
       var frame = ghost.replay.frames[ghost.frame];
       if (!frame) return;
       return frame.pos;
     }
 
     function ghost_compare_to_replay(replay, ghost, max) {
-      if (!enable_ghost)
-        return;
-      if (ghost == null)
-        return;
-      if (replay == null)
-        return;
+      if (!enable_ghost) return;
+      if (ghost == null) return;
+      if (replay == null) return;
 
       if (ghost.dist < max) {
         ghost.replay = replay;
@@ -848,22 +888,17 @@ function createNormal(prop, generator) {
     }
 
     function ghost_move_frame(ghost) {
-      if (!enable_ghost)
-        return;
-      if (ghost == null)
-        return;
-      if (ghost.replay == null)
-        return;
+      if (!enable_ghost) return;
+      if (ghost == null) return;
+      if (ghost.replay == null) return;
       ghost.frame++;
       if (ghost.frame >= ghost.replay.num_frames)
         ghost.frame = ghost.replay.num_frames - 1;
     }
 
     function ghost_add_replay_frame(replay, car) {
-      if (!enable_ghost)
-        return;
-      if (replay == null)
-        return;
+      if (!enable_ghost) return;
+      if (replay == null) return;
 
       var frame = ghost_get_frame(car);
       replay.frames.push(frame);
@@ -872,14 +907,10 @@ function createNormal(prop, generator) {
 
     function ghost_draw_frame(ctx, ghost, camera) {
       var zoom = camera.zoom;
-      if (!enable_ghost)
-        return;
-      if (ghost == null)
-        return;
-      if (ghost.frame < 0)
-        return;
-      if (ghost.replay == null)
-        return;
+      if (!enable_ghost) return;
+      if (ghost == null) return;
+      if (ghost.frame < 0) return;
+      if (ghost.replay == null) return;
 
       var frame = ghost.replay.frames[ghost.frame];
       if (!frame) return;
@@ -891,7 +922,12 @@ function createNormal(prop, generator) {
 
       for (var i = 0; i < frame.wheels.length; i++) {
         for (var w in frame.wheels[i]) {
-          ghost_draw_circle(ctx, frame.wheels[i][w].pos, frame.wheels[i][w].rad, frame.wheels[i][w].ang);
+          ghost_draw_circle(
+            ctx,
+            frame.wheels[i][w].pos,
+            frame.wheels[i][w].rad,
+            frame.wheels[i][w].ang,
+          );
         }
       }
 
@@ -919,26 +955,32 @@ function createNormal(prop, generator) {
       ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI, true);
 
       ctx.moveTo(center.x, center.y);
-      ctx.lineTo(center.x + radius * Math.cos(angle), center.y + radius * Math.sin(angle));
+      ctx.lineTo(
+        center.x + radius * Math.cos(angle),
+        center.y + radius * Math.sin(angle),
+      );
 
       ctx.fill();
       ctx.stroke();
     }
 
     return {
-      ghost_create_replay: ghost_create_replay, ghost_create_ghost: ghost_create_ghost,
-      ghost_pause: ghost_pause, ghost_resume: ghost_resume,
-      ghost_get_position: ghost_get_position, ghost_compare_to_replay: ghost_compare_to_replay,
-      ghost_move_frame: ghost_move_frame, ghost_add_replay_frame: ghost_add_replay_frame,
-      ghost_draw_frame: ghost_draw_frame, ghost_reset_ghost: ghost_reset_ghost
+      ghost_create_replay: ghost_create_replay,
+      ghost_create_ghost: ghost_create_ghost,
+      ghost_pause: ghost_pause,
+      ghost_resume: ghost_resume,
+      ghost_get_position: ghost_get_position,
+      ghost_compare_to_replay: ghost_compare_to_replay,
+      ghost_move_frame: ghost_move_frame,
+      ghost_add_replay_frame: ghost_add_replay_frame,
+      ghost_draw_frame: ghost_draw_frame,
+      ghost_reset_ghost: ghost_reset_ghost,
     };
   })();
-
 
   /* -------------------------------------------------------------------------
    * draw/draw-virtual-poly.js
    * ------------------------------------------------------------------------- */
-
 
   function cw_drawVirtualPoly(ctx, body, vtx, n_vtx) {
     // set strokestyle and fillstyle before call
@@ -953,12 +995,9 @@ function createNormal(prop, generator) {
     ctx.lineTo(p0.x, p0.y);
   }
 
-
   /* -------------------------------------------------------------------------
    * draw/draw-circle.js
    * ------------------------------------------------------------------------- */
-
-
 
   function cw_drawCircle(ctx, body, center, radius, angle, color) {
     var p = body.GetWorldPoint(center);
@@ -973,7 +1012,6 @@ function createNormal(prop, generator) {
     ctx.fill();
     ctx.stroke();
   }
-
 
   /* -------------------------------------------------------------------------
    * draw/draw-floor.js
@@ -994,14 +1032,12 @@ function createNormal(prop, generator) {
       k = 0;
     }
 
-
-    outer_loop:
-    for (k; k < cw_floorTiles.length; k++) {
+    outer_loop: for (k; k < cw_floorTiles.length; k++) {
       var b = cw_floorTiles[k];
       for (var f = b.GetFixtureList(); f; f = f.m_next) {
         var s = f.GetShape();
         var shapePosition = b.GetWorldPoint(s.m_vertices[0]).x;
-        if ((shapePosition > (camera_x - 5)) && (shapePosition < (camera_x + 10))) {
+        if (shapePosition > camera_x - 5 && shapePosition < camera_x + 10) {
           cw_drawVirtualPoly(ctx, b, s.m_vertices, s.m_vertexCount);
         }
         if (shapePosition > camera_x + 10) {
@@ -1013,31 +1049,32 @@ function createNormal(prop, generator) {
     ctx.stroke();
   }
 
-
   /* -------------------------------------------------------------------------
    * draw/scatter-plot.js
    * ------------------------------------------------------------------------- */
 
-
   // Called when the Visualization API is loaded.
-
 
   /* -------------------------------------------------------------------------
    * draw/plot-graphs.js
    * ------------------------------------------------------------------------- */
 
-
   var graph_fns = {
-    plotGraphs: function (graphElem, topScoresElem, scatterPlotElem, lastState, scores, config) {
+    plotGraphs: function (
+      graphElem,
+      topScoresElem,
+      scatterPlotElem,
+      lastState,
+      scores,
+      config,
+    ) {
       lastState = lastState || {};
-      var generationSize = scores.length
+      var generationSize = scores.length;
       var graphcanvas = graphElem;
       var graphctx = graphcanvas.getContext("2d");
       var graphwidth = 400;
       var graphheight = 250;
-      var nextState = cw_storeGraphScores(
-        lastState, scores, generationSize
-      );
+      var nextState = cw_storeGraphScores(lastState, scores, generationSize);
       cw_clearGraphics(graphcanvas, graphctx, graphwidth, graphheight);
       cw_plotAverage(nextState, graphctx);
       cw_plotElite(nextState, graphctx);
@@ -1047,21 +1084,21 @@ function createNormal(prop, generator) {
     },
   };
 
-
   function cw_storeGraphScores(lastState, cw_carScores, generationSize) {
     return {
-      cw_topScores: (lastState.cw_topScores || [])
-        .concat([cw_carScores[0].score]),
+      cw_topScores: (lastState.cw_topScores || []).concat([
+        cw_carScores[0].score,
+      ]),
       cw_graphAverage: (lastState.cw_graphAverage || []).concat([
-        cw_average(cw_carScores, generationSize)
+        cw_average(cw_carScores, generationSize),
       ]),
       cw_graphElite: (lastState.cw_graphElite || []).concat([
-        cw_eliteaverage(cw_carScores, generationSize)
+        cw_eliteaverage(cw_carScores, generationSize),
       ]),
       cw_graphTop: (lastState.cw_graphTop || []).concat([
-        cw_carScores[0].score.v
+        cw_carScores[0].score.v,
       ]),
-    }
+    };
   }
 
   function cw_plotTop(state, graphctx) {
@@ -1071,7 +1108,7 @@ function createNormal(prop, generator) {
     graphctx.beginPath();
     graphctx.moveTo(0, 0);
     for (var k = 0; k < graphsize; k++) {
-      graphctx.lineTo(400 * (k + 1) / graphsize, cw_graphTop[k]);
+      graphctx.lineTo((400 * (k + 1)) / graphsize, cw_graphTop[k]);
     }
     graphctx.stroke();
   }
@@ -1083,7 +1120,7 @@ function createNormal(prop, generator) {
     graphctx.beginPath();
     graphctx.moveTo(0, 0);
     for (var k = 0; k < graphsize; k++) {
-      graphctx.lineTo(400 * (k + 1) / graphsize, cw_graphElite[k]);
+      graphctx.lineTo((400 * (k + 1)) / graphsize, cw_graphElite[k]);
     }
     graphctx.stroke();
   }
@@ -1095,11 +1132,10 @@ function createNormal(prop, generator) {
     graphctx.beginPath();
     graphctx.moveTo(0, 0);
     for (var k = 0; k < graphsize; k++) {
-      graphctx.lineTo(400 * (k + 1) / graphsize, cw_graphAverage[k]);
+      graphctx.lineTo((400 * (k + 1)) / graphsize, cw_graphAverage[k]);
     }
     graphctx.stroke();
   }
-
 
   function cw_eliteaverage(scores, generationSize) {
     var sum = 0;
@@ -1128,8 +1164,8 @@ function createNormal(prop, generator) {
     graphctx.lineTo(graphwidth, graphheight / 2);
     graphctx.moveTo(0, graphheight / 4);
     graphctx.lineTo(graphwidth, graphheight / 4);
-    graphctx.moveTo(0, graphheight * 3 / 4);
-    graphctx.lineTo(graphwidth, graphheight * 3 / 4);
+    graphctx.moveTo(0, (graphheight * 3) / 4);
+    graphctx.lineTo(graphwidth, (graphheight * 3) / 4);
     graphctx.stroke();
   }
 
@@ -1139,9 +1175,9 @@ function createNormal(prop, generator) {
     ts.innerHTML = "<b>Top Scores:</b><br />";
     cw_topScores.sort(function (a, b) {
       if (a.v > b.v) {
-        return -1
+        return -1;
       } else {
-        return 1
+        return 1;
       }
     });
 
@@ -1150,8 +1186,13 @@ function createNormal(prop, generator) {
       var n = "#" + (k + 1) + ":";
       var score = Math.round(topScore.v * 100) / 100;
       var distance = "d:" + Math.round(topScore.x * 100) / 100;
-      var yrange = "h:" + Math.round(topScore.y2 * 100) / 100 + "/" + Math.round(topScore.y * 100) / 100 + "m";
-      var gen = "(Gen " + cw_topScores[k].i + ")"
+      var yrange =
+        "h:" +
+        Math.round(topScore.y2 * 100) / 100 +
+        "/" +
+        Math.round(topScore.y * 100) / 100 +
+        "m";
+      var gen = "(Gen " + cw_topScores[k].i + ")";
 
       ts.innerHTML += [n, score, distance, yrange, gen].join(" ") + "<br />";
     }
@@ -1161,22 +1202,19 @@ function createNormal(prop, generator) {
    * draw/draw-car.js
    * ------------------------------------------------------------------------- */
 
-
-
-
   function drawCar(car_constants, myCar, camera, ctx) {
     var camera_x = camera.pos.x;
     var zoom = camera.zoom;
 
-    var wheelMinDensity = car_constants.wheelMinDensity
-    var wheelDensityRange = car_constants.wheelDensityRange
+    var wheelMinDensity = car_constants.wheelMinDensity;
+    var wheelDensityRange = car_constants.wheelDensityRange;
 
     if (!myCar.alive) {
       return;
     }
     var myCarPos = myCar.getPosition();
 
-    if (myCarPos.x < (camera_x - 5)) {
+    if (myCarPos.x < camera_x - 5) {
       // too far behind, don't draw
       return;
     }
@@ -1190,7 +1228,9 @@ function createNormal(prop, generator) {
       var b = wheels[i];
       for (var f = b.GetFixtureList(); f; f = f.m_next) {
         var s = f.GetShape();
-        var color = Math.round(255 - (255 * (f.m_density - wheelMinDensity)) / wheelDensityRange).toString();
+        var color = Math.round(
+          255 - (255 * (f.m_density - wheelMinDensity)) / wheelDensityRange,
+        ).toString();
         var rgbcolor = "rgb(" + color + "," + color + "," + color + ")";
         cw_drawCircle(ctx, b, s.m_p, s.m_radius, b.m_sweep.a, rgbcolor);
       }
@@ -1215,11 +1255,9 @@ function createNormal(prop, generator) {
     ctx.stroke();
   }
 
-
   /* -------------------------------------------------------------------------
    * draw/draw-car-stats.js
    * ------------------------------------------------------------------------- */
-
 
   var run = carRun;
 
@@ -1227,7 +1265,7 @@ function createNormal(prop, generator) {
   /* === Car ================================================================= */
   var cw_Car = function () {
     this.__constructor.apply(this, arguments);
-  }
+  };
 
   cw_Car.prototype.__constructor = function (car) {
     this.car = car;
@@ -1238,7 +1276,9 @@ function createNormal(prop, generator) {
     this.alive = true;
     this.is_elite = car.def.is_elite;
     this.healthBar = document.getElementById("health" + car_def.index).style;
-    this.healthBarText = document.getElementById("health" + car_def.index).nextSibling.nextSibling;
+    this.healthBarText = document.getElementById(
+      "health" + car_def.index,
+    ).nextSibling.nextSibling;
     this.healthBarText.innerHTML = car_def.index;
     this.minimapmarker = document.getElementById("bar" + car_def.index);
 
@@ -1251,43 +1291,37 @@ function createNormal(prop, generator) {
       this.minimapmarker.style.borderLeft = "1px solid #F7C873";
       this.minimapmarker.innerHTML = car_def.index;
     }
-
-  }
+  };
 
   cw_Car.prototype.getPosition = function () {
     return this.car.car.chassis.GetPosition();
-  }
+  };
 
   cw_Car.prototype.kill = function (currentRunner, constants) {
     this.minimapmarker.style.borderLeft = "1px solid #ccc";
-    var finishLine = currentRunner.scene.finishLine
+    var finishLine = currentRunner.scene.finishLine;
     var max_car_health = constants.max_car_health;
     var status = run.getStatus(this.car.state, {
       finishLine: finishLine,
       max_car_health: max_car_health,
-    })
+    });
     switch (status) {
       case 1: {
         this.healthBar.width = "0";
-        break
+        break;
       }
       case -1: {
         this.healthBarText.innerHTML = "&dagger;";
         this.healthBar.width = "0";
-        break
+        break;
       }
     }
     this.alive = false;
-
-  }
-
-
-
+  };
 
   /* -------------------------------------------------------------------------
    * world/setup-scene.js
    * ------------------------------------------------------------------------- */
-
 
   /*
   
@@ -1303,33 +1337,36 @@ function createNormal(prop, generator) {
   */
 
   function setupScene(world_def) {
-
     var world = new b2World(world_def.gravity, world_def.doSleep);
     var floorTiles = cw_createFloor(
       world,
       world_def.floorseed,
       world_def.tileDimensions,
       world_def.maxFloorTiles,
-      world_def.mutable_floor
+      world_def.mutable_floor,
     );
 
-    var last_tile = floorTiles[
-      floorTiles.length - 1
-    ];
+    var last_tile = floorTiles[floorTiles.length - 1];
     var last_fixture = last_tile.GetFixtureList();
     var tile_position = last_tile.GetWorldPoint(
-      last_fixture.GetShape().m_vertices[3]
+      last_fixture.GetShape().m_vertices[3],
     );
     var finishLine = tile_position.x + 5;
     world.finishLine = finishLine;
     return {
       world: world,
       floorTiles: floorTiles,
-      finishLine: finishLine
+      finishLine: finishLine,
     };
   }
 
-  function cw_createFloor(world, floorseed, dimensions, maxFloorTiles, mutable_floor) {
+  function cw_createFloor(
+    world,
+    floorseed,
+    dimensions,
+    maxFloorTiles,
+    mutable_floor,
+  ) {
     var last_tile = null;
     var tile_position = new b2Vec2(-5, 0);
     var cw_floorTiles = [];
@@ -1338,21 +1375,28 @@ function createNormal(prop, generator) {
       if (!mutable_floor) {
         // keep old impossible tracks if not using mutable floors
         last_tile = cw_createFloorTile(
-          world, dimensions, tile_position, (Math.random() * 3 - 1.5) * 1.5 * k / maxFloorTiles
+          world,
+          dimensions,
+          tile_position,
+          ((Math.random() * 3 - 1.5) * 1.5 * k) / maxFloorTiles,
         );
       } else {
         // if path is mutable over races, create smoother tracks
         last_tile = cw_createFloorTile(
-          world, dimensions, tile_position, (Math.random() * 3 - 1.5) * 1.2 * k / maxFloorTiles
+          world,
+          dimensions,
+          tile_position,
+          ((Math.random() * 3 - 1.5) * 1.2 * k) / maxFloorTiles,
         );
       }
       cw_floorTiles.push(last_tile);
       var last_fixture = last_tile.GetFixtureList();
-      tile_position = last_tile.GetWorldPoint(last_fixture.GetShape().m_vertices[3]);
+      tile_position = last_tile.GetWorldPoint(
+        last_fixture.GetShape().m_vertices[3],
+      );
     }
     return cw_floorTiles;
   }
-
 
   function cw_createFloorTile(world, dim, position, angle) {
     var body_def = new b2BodyDef();
@@ -1382,12 +1426,17 @@ function createNormal(prop, generator) {
   function cw_rotateFloorTile(coords, center, angle) {
     return coords.map(function (coord) {
       return {
-        x: Math.cos(angle) * (coord.x - center.x) - Math.sin(angle) * (coord.y - center.y) + center.x,
-        y: Math.sin(angle) * (coord.x - center.x) + Math.cos(angle) * (coord.y - center.y) + center.y,
+        x:
+          Math.cos(angle) * (coord.x - center.x) -
+          Math.sin(angle) * (coord.y - center.y) +
+          center.x,
+        y:
+          Math.sin(angle) * (coord.x - center.x) +
+          Math.cos(angle) * (coord.y - center.y) +
+          center.y,
       };
     });
   }
-
 
   /* -------------------------------------------------------------------------
    * world/run.js
@@ -1406,7 +1455,7 @@ function createNormal(prop, generator) {
         index: i,
         def: def,
         car: defToCar(def, scene.world, world_def),
-        state: carRun.getInitialState(world_def)
+        state: carRun.getInitialState(world_def),
       };
     });
     var alivecars = cars;
@@ -1420,9 +1469,7 @@ function createNormal(prop, generator) {
         scene.world.Step(1 / world_def.box2dfps, 20, 20);
         listeners.preCarStep();
         alivecars = alivecars.filter(function (car) {
-          car.state = carRun.updateState(
-            world_def, car.car, car.state
-          );
+          car.state = carRun.updateState(world_def, car.car, car.state);
           var status = carRun.getStatus(car.state, world_def);
           listeners.carStep(car);
           if (status === 0) {
@@ -1440,23 +1487,18 @@ function createNormal(prop, generator) {
           }
 
           return false;
-        })
+        });
         if (alivecars.length === 0) {
           listeners.generationEnd(cars);
         }
-      }
-    }
-
+      },
+    };
   }
-
 
   /* -------------------------------------------------------------------------
    * index.js (main entry)
    * ------------------------------------------------------------------------- */
   // Global Vars
-
-
-
 
   var plot_graphs = graph_fns.plotGraphs;
 
@@ -1466,7 +1508,7 @@ function createNormal(prop, generator) {
   var ghost_compare_to_replay = ghost_fns.ghost_compare_to_replay;
   var ghost_get_position = ghost_fns.ghost_get_position;
   var ghost_move_frame = ghost_fns.ghost_move_frame;
-  var ghost_reset_ghost = ghost_fns.ghost_reset_ghost
+  var ghost_reset_ghost = ghost_fns.ghost_reset_ghost;
   var ghost_pause = ghost_fns.ghost_pause;
   var ghost_resume = ghost_fns.ghost_resume;
   var ghost_create_replay = ghost_fns.ghost_create_replay;
@@ -1477,6 +1519,7 @@ function createNormal(prop, generator) {
   var doDraw = true;
   var cw_paused = false;
   var cw_animationFrameId = null;
+  var cw_runningInterval = null;
 
   var box2dfps = 60;
   var screenfps = 60;
@@ -1489,11 +1532,12 @@ function createNormal(prop, generator) {
   var camera = {
     speed: 0.05,
     pos: {
-      x: 0, y: 0
+      x: 0,
+      y: 0,
     },
     target: -1,
-    zoom: 70
-  }
+    zoom: 70,
+  };
 
   var minimapcamera = document.getElementById("minimapcamera").style;
   var minimapholder = document.querySelector("#minimapholder");
@@ -1505,9 +1549,7 @@ function createNormal(prop, generator) {
   var lastFloorSeed = null;
   var fogdistance = document.getElementById("minimapfog").style;
 
-
   var carConstants = carConstruct.carConstants();
-
 
   var max_car_health = box2dfps * 10;
 
@@ -1517,15 +1559,14 @@ function createNormal(prop, generator) {
   var heightMeter = document.getElementById("heightmeter");
 
   var leaderPosition = {
-    x: 0, y: 0
-  }
+    x: 0,
+    y: 0,
+  };
 
   minimapcamera.width = 12 * minimapscale + "px";
   minimapcamera.height = 6 * minimapscale + "px";
 
-
   // ======= WORLD STATE ======
-
 
   var world_def = {
     gravity: new b2Vec2(0.0, -9.81),
@@ -1537,8 +1578,8 @@ function createNormal(prop, generator) {
     box2dfps: box2dfps,
     motorSpeed: 20,
     max_car_health: max_car_health,
-    schema: generationConfig.constants.schema
-  }
+    schema: generationConfig.constants.schema,
+  };
 
   var cw_deadCars;
   var graphState = {
@@ -1557,8 +1598,6 @@ function createNormal(prop, generator) {
     };
   }
 
-
-
   // ==========================
 
   var generationState;
@@ -1566,7 +1605,7 @@ function createNormal(prop, generator) {
   // ======== Activity State ====
   var currentRunner;
   var loops = 0;
-  var nextGameTick = (new Date).getTime();
+  var nextGameTick = new Date().getTime();
 
   function showDistance(distance, height) {
     distanceMeter.innerHTML = distance + " meters<br />";
@@ -1577,28 +1616,27 @@ function createNormal(prop, generator) {
     }
   }
 
-
-
   /* === END Car ============================================================= */
   /* ========================================================================= */
-
 
   /* ========================================================================= */
   /* ==== Generation ========================================================= */
 
   function cw_generationZero() {
-
     generationState = manageRound.generationZero(generationConfig());
   }
 
   function resetCarUI() {
     cw_deadCars = 0;
     leaderPosition = {
-      x: 0, y: 0
+      x: 0,
+      y: 0,
     };
-    document.getElementById("generation").innerHTML = generationState.counter.toString();
+    document.getElementById("generation").innerHTML =
+      generationState.counter.toString();
     document.getElementById("cars").innerHTML = "";
-    document.getElementById("population").innerHTML = generationConfig.constants.generationSize.toString();
+    document.getElementById("population").innerHTML =
+      generationConfig.constants.generationSize.toString();
   }
 
   /* ==== END Genration ====================================================== */
@@ -1615,7 +1653,7 @@ function createNormal(prop, generator) {
     var camera_x = camera.pos.x;
     var camera_y = camera.pos.y;
     var zoom = camera.zoom;
-    ctx.translate(200 - (camera_x * zoom), 200 + (camera_y * zoom));
+    ctx.translate(200 - camera_x * zoom, 200 + camera_y * zoom);
     ctx.scale(zoom, -zoom);
     cw_drawFloor(ctx, camera, floorTiles);
     ghost_draw_frame(ctx, ghost, camera);
@@ -1624,8 +1662,8 @@ function createNormal(prop, generator) {
   }
 
   function cw_minimapCamera() {
-    var camera_x = camera.pos.x
-    var camera_y = camera.pos.y
+    var camera_x = camera.pos.x;
+    var camera_y = camera.pos.y;
     minimapcamera.left = Math.round((2 + camera_x) * minimapscale) + "px";
     minimapcamera.top = Math.round((31 - camera_y) * minimapscale) + "px";
   }
@@ -1636,7 +1674,7 @@ function createNormal(prop, generator) {
       return;
     }
     // k can be a numeric index from the HTML onclick or a car info object
-    if (typeof k === 'number' && currentRunner) {
+    if (typeof k === "number" && currentRunner) {
       var carInfo = currentRunner.cars[k];
       if (carInfo && carMap.has(carInfo)) {
         camera.target = carInfo;
@@ -1649,7 +1687,7 @@ function createNormal(prop, generator) {
   }
 
   function cw_setCameraPosition() {
-    var cameraTargetPosition
+    var cameraTargetPosition;
     if (camera.target !== -1 && carMap.has(camera.target)) {
       cameraTargetPosition = carMap.get(camera.target).getPosition();
     } else {
@@ -1671,7 +1709,7 @@ function createNormal(prop, generator) {
       ctx.save();
       cw_setCameraPosition();
       var zoom = camera.zoom;
-      ctx.translate(200 - (camera.pos.x * zoom), 200 + (camera.pos.y * zoom));
+      ctx.translate(200 - camera.pos.x * zoom, 200 + camera.pos.y * zoom);
       ctx.scale(zoom, -zoom);
       cw_drawFloor(ctx, camera, floorTiles);
       ctx.restore();
@@ -1682,13 +1720,13 @@ function createNormal(prop, generator) {
     cw_minimapCamera();
     showDistance(
       Math.round(carPosition.x * 100) / 100,
-      Math.round(carPosition.y * 100) / 100
+      Math.round(carPosition.y * 100) / 100,
     );
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.translate(
-      200 - (carPosition.x * camera.zoom),
-      200 + (carPosition.y * camera.zoom)
+      200 - carPosition.x * camera.zoom,
+      200 + carPosition.y * camera.zoom,
     );
     ctx.scale(camera.zoom, -camera.zoom);
     ghost_draw_frame(ctx, ghost, camera);
@@ -1697,12 +1735,11 @@ function createNormal(prop, generator) {
     ctx.restore();
   }
 
-
   function cw_drawCars() {
     var cw_carArray = Array.from(carMap.values());
-    for (var k = (cw_carArray.length - 1); k >= 0; k--) {
+    for (var k = cw_carArray.length - 1; k >= 0; k--) {
       var myCar = cw_carArray[k];
-      drawCar(carConstants, myCar, camera, ctx)
+      drawCar(carConstants, myCar, camera, ctx);
     }
   }
 
@@ -1712,7 +1749,7 @@ function createNormal(prop, generator) {
       doDraw = false;
       cw_stopSimulation();
       cw_runningInterval = setInterval(function () {
-        var time = performance.now() + (1000 / screenfps);
+        var time = performance.now() + 1000 / screenfps;
         while (time > performance.now()) {
           simulationStep();
         }
@@ -1728,7 +1765,7 @@ function createNormal(prop, generator) {
     var floorTiles = currentRunner.scene.floorTiles;
     var last_tile = null;
     var tile_position = new b2Vec2(-5, 0);
-    var floorChanged = (lastFloorSeed !== world_def.floorseed);
+    var floorChanged = lastFloorSeed !== world_def.floorseed;
     lastFloorSeed = world_def.floorseed;
     if (floorChanged) {
       minimapfogdistance = 0;
@@ -1741,9 +1778,14 @@ function createNormal(prop, generator) {
     for (var k = 0; k < floorTiles.length; k++) {
       last_tile = floorTiles[k];
       var last_fixture = last_tile.GetFixtureList();
-      var last_world_coords = last_tile.GetWorldPoint(last_fixture.GetShape().m_vertices[3]);
+      var last_world_coords = last_tile.GetWorldPoint(
+        last_fixture.GetShape().m_vertices[3],
+      );
       tile_position = last_world_coords;
-      minimapctx.lineTo((tile_position.x + 5) * minimapscale, (-tile_position.y + 35) * minimapscale);
+      minimapctx.lineTo(
+        (tile_position.x + 5) * minimapscale,
+        (-tile_position.y + 35) * minimapscale,
+      );
     }
     minimapctx.stroke();
   }
@@ -1758,10 +1800,10 @@ function createNormal(prop, generator) {
       updateCarUI(car);
     },
     carDeath(carInfo) {
-
       var k = carInfo.index;
 
-      var car = carInfo.car, score = carInfo.score;
+      var car = carInfo.car,
+        score = carInfo.score;
       var cwCar = carMap.get(carInfo);
       cwCar.kill(currentRunner, world_def);
 
@@ -1777,7 +1819,9 @@ function createNormal(prop, generator) {
 
       cw_deadCars++;
       var generationSize = generationConfig.constants.generationSize;
-      document.getElementById("population").innerHTML = (generationSize - cw_deadCars).toString();
+      document.getElementById("population").innerHTML = (
+        generationSize - cw_deadCars
+      ).toString();
 
       if (leaderPosition.leader == k) {
         // leader is dead, find new leader
@@ -1787,27 +1831,32 @@ function createNormal(prop, generator) {
     generationEnd(results) {
       cleanupRound(results);
       return cw_newRound(results);
-    }
-  }
+    },
+  };
 
   function simulationStep() {
     currentRunner.step();
     showDistance(
       Math.round(leaderPosition.x * 100) / 100,
-      Math.round(leaderPosition.y * 100) / 100
+      Math.round(leaderPosition.y * 100) / 100,
     );
   }
 
   function gameLoop() {
     loops = 0;
-    while (!cw_paused && (new Date).getTime() > nextGameTick && loops < maxFrameSkip) {
+    while (
+      !cw_paused &&
+      new Date().getTime() > nextGameTick &&
+      loops < maxFrameSkip
+    ) {
       nextGameTick += skipTicks;
       loops++;
     }
     simulationStep();
     cw_drawScreen();
 
-    if (!cw_paused) cw_animationFrameId = window.requestAnimationFrame(gameLoop);
+    if (!cw_paused)
+      cw_animationFrameId = window.requestAnimationFrame(gameLoop);
   }
 
   function updateCarUI(carInfo) {
@@ -1816,8 +1865,10 @@ function createNormal(prop, generator) {
     var position = car.getPosition();
 
     ghost_add_replay_frame(car.replay, car.car.car);
-    car.minimapmarker.style.left = Math.round((position.x + 5) * minimapscale) + "px";
-    car.healthBar.width = Math.round((car.car.state.health / max_car_health) * 100) + "%";
+    car.minimapmarker.style.left =
+      Math.round((position.x + 5) * minimapscale) + "px";
+    car.healthBar.width =
+      Math.round((car.car.state.health / max_car_health) * 100) + "%";
     if (position.x > leaderPosition.x) {
       leaderPosition = position;
       leaderPosition.leader = k;
@@ -1826,7 +1877,7 @@ function createNormal(prop, generator) {
 
   function cw_findLeader() {
     var lead = 0;
-    carMap.forEach(function(cwCar, carInfo) {
+    carMap.forEach(function (cwCar, carInfo) {
       if (!cwCar.alive) {
         return;
       }
@@ -1847,20 +1898,19 @@ function createNormal(prop, generator) {
   }
 
   function cleanupRound(results) {
-
     results.sort(function (a, b) {
       if (a.score.v > b.score.v) {
-        return -1
+        return -1;
       } else {
-        return 1
+        return 1;
       }
-    })
+    });
     graphState = plot_graphs(
       document.getElementById("graphcanvas"),
       document.getElementById("topscores"),
       null,
       graphState,
-      results
+      results,
     );
   }
 
@@ -1875,7 +1925,9 @@ function createNormal(prop, generator) {
     Math.seedrandom();
 
     generationState = manageRound.nextGeneration(
-      generationState, results, generationConfig()
+      generationState,
+      results,
+      generationConfig(),
     );
     if (world_def.mutable_floor) {
       ghost = null;
@@ -1883,7 +1935,11 @@ function createNormal(prop, generator) {
     } else {
       ghost_reset_ghost(ghost);
     }
-    currentRunner = worldRun(world_def, generationState.generation, uiListeners);
+    currentRunner = worldRun(
+      world_def,
+      generationState.generation,
+      uiListeners,
+    );
     setupCarUI();
     cw_drawMiniMap();
     resetCarUI();
@@ -1927,12 +1983,14 @@ function createNormal(prop, generator) {
     Math.seedrandom();
     cw_generationZero();
     currentRunner = worldRun(
-      world_def, generationState.generation, uiListeners
+      world_def,
+      generationState.generation,
+      uiListeners,
     );
 
     ghost = ghost_create_ghost();
     resetCarUI();
-    setupCarUI()
+    setupCarUI();
     cw_drawMiniMap();
 
     cw_startSimulation();
@@ -1944,42 +2002,57 @@ function createNormal(prop, generator) {
       carMap.set(carInfo, car);
       car.replay = ghost_create_replay();
       ghost_add_replay_frame(car.replay, car.car.car);
-    })
+    });
   }
 
+  document
+    .querySelector("#fast-forward")
+    .addEventListener("click", function () {
+      fastForward();
+    });
 
-  document.querySelector("#fast-forward").addEventListener("click", function () {
-    fastForward()
-  });
+  document
+    .querySelector("#save-progress")
+    .addEventListener("click", function () {
+      saveProgress();
+    });
 
-  document.querySelector("#save-progress").addEventListener("click", function () {
-    saveProgress()
-  });
+  document
+    .querySelector("#restore-progress")
+    .addEventListener("click", function () {
+      restoreProgress();
+    });
 
-  document.querySelector("#restore-progress").addEventListener("click", function () {
-    restoreProgress()
-  });
+  document
+    .querySelector("#toggle-display")
+    .addEventListener("click", function () {
+      toggleDisplay();
+    });
 
-  document.querySelector("#toggle-display").addEventListener("click", function () {
-    toggleDisplay()
-  })
-
-  document.querySelector("#new-population").addEventListener("click", function () {
-    cw_stopSimulation();
-    cw_clearPopulationWorld();
-    cw_resetPopulationUI();
-    Math.seedrandom();
-    cw_generationZero();
-    ghost = ghost_create_ghost();
-    currentRunner = worldRun(world_def, generationState.generation, uiListeners);
-    setupCarUI();
-    cw_drawMiniMap();
-    resetCarUI();
-    cw_startSimulation();
-  })
+  document
+    .querySelector("#new-population")
+    .addEventListener("click", function () {
+      cw_stopSimulation();
+      cw_clearPopulationWorld();
+      cw_resetPopulationUI();
+      Math.seedrandom();
+      cw_generationZero();
+      ghost = ghost_create_ghost();
+      currentRunner = worldRun(
+        world_def,
+        generationState.generation,
+        uiListeners,
+      );
+      setupCarUI();
+      cw_drawMiniMap();
+      resetCarUI();
+      cw_startSimulation();
+    });
 
   function saveProgress() {
-    localStorage.cw_savedGeneration = JSON.stringify(generationState.generation);
+    localStorage.cw_savedGeneration = JSON.stringify(
+      generationState.generation,
+    );
     localStorage.cw_genCounter = generationState.counter;
     localStorage.cw_ghost = JSON.stringify(ghost);
     localStorage.cw_topScores = JSON.stringify(graphState.cw_topScores);
@@ -1987,7 +2060,10 @@ function createNormal(prop, generator) {
   }
 
   function restoreProgress() {
-    if (typeof localStorage.cw_savedGeneration == 'undefined' || localStorage.cw_savedGeneration == null) {
+    if (
+      typeof localStorage.cw_savedGeneration == "undefined" ||
+      localStorage.cw_savedGeneration == null
+    ) {
       alert("No saved progress found");
       return;
     }
@@ -2000,7 +2076,11 @@ function createNormal(prop, generator) {
     world_def.floorseed = localStorage.cw_floorSeed;
     document.getElementById("newseed").value = world_def.floorseed;
 
-    currentRunner = worldRun(world_def, generationState.generation, uiListeners);
+    currentRunner = worldRun(
+      world_def,
+      generationState.generation,
+      uiListeners,
+    );
     setupCarUI();
     cw_drawMiniMap();
     Math.seedrandom();
@@ -2009,12 +2089,14 @@ function createNormal(prop, generator) {
     cw_startSimulation();
   }
 
-  document.querySelector("#confirm-reset").addEventListener("click", function () {
-    cw_confirmResetWorld()
-  })
+  document
+    .querySelector("#confirm-reset")
+    .addEventListener("click", function () {
+      cw_confirmResetWorld();
+    });
 
   function cw_confirmResetWorld() {
-    if (confirm('Really reset world?')) {
+    if (confirm("Really reset world?")) {
       cw_resetWorld();
     } else {
       return false;
@@ -2022,7 +2104,6 @@ function createNormal(prop, generator) {
   }
 
   // ghost replay stuff
-
 
   function cw_pauseSimulation() {
     cw_stopSimulation();
@@ -2039,7 +2120,10 @@ function createNormal(prop, generator) {
       toggleDisplay();
     }
     cw_pauseSimulation();
-    cw_ghostReplayInterval = setInterval(cw_drawGhostReplay, Math.round(1000 / screenfps));
+    cw_ghostReplayInterval = setInterval(
+      cw_drawGhostReplay,
+      Math.round(1000 / screenfps),
+    );
   }
 
   function cw_stopGhostReplay() {
@@ -2051,9 +2135,11 @@ function createNormal(prop, generator) {
     cw_resumeSimulation();
   }
 
-  document.querySelector("#toggle-ghost").addEventListener("click", function (e) {
-    cw_toggleGhostReplay(e.target)
-  })
+  document
+    .querySelector("#toggle-ghost")
+    .addEventListener("click", function (e) {
+      cw_toggleGhostReplay(e.target);
+    });
 
   function cw_toggleGhostReplay(button) {
     if (cw_ghostReplayInterval == null) {
@@ -2069,12 +2155,11 @@ function createNormal(prop, generator) {
   // initial stuff, only called once (hopefully)
   function cw_init() {
     // clone silver dot and health bar
-    var mmm = document.getElementsByName('minimapmarker')[0];
-    var hbar = document.getElementsByName('healthbar')[0];
+    var mmm = document.getElementsByName("minimapmarker")[0];
+    var hbar = document.getElementsByName("healthbar")[0];
     var generationSize = generationConfig.constants.generationSize;
 
     for (var k = 0; k < generationSize; k++) {
-
       // minimap markers
       var newbar = mmm.cloneNode(true);
       newbar.id = "bar" + k;
@@ -2093,11 +2178,14 @@ function createNormal(prop, generator) {
     cw_generationZero();
     ghost = ghost_create_ghost();
     resetCarUI();
-    currentRunner = worldRun(world_def, generationState.generation, uiListeners);
+    currentRunner = worldRun(
+      world_def,
+      generationState.generation,
+      uiListeners,
+    );
     setupCarUI();
     cw_drawMiniMap();
     cw_startSimulation();
-
   }
 
   function relMouseCoords(event) {
@@ -2110,14 +2198,13 @@ function createNormal(prop, generator) {
     do {
       totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
       totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
-      currentElement = currentElement.offsetParent
-    }
-    while (currentElement);
+      currentElement = currentElement.offsetParent;
+    } while (currentElement);
 
     canvasX = event.pageX - totalOffsetX;
     canvasY = event.pageY - totalOffsetY;
 
-    return { x: canvasX, y: canvasY }
+    return { x: canvasX, y: canvasY };
   }
   HTMLDivElement.prototype.relMouseCoords = relMouseCoords;
   minimapholder.onclick = function (event) {
@@ -2125,14 +2212,16 @@ function createNormal(prop, generator) {
     var cw_carArray = Array.from(carMap.values());
     var closest = {
       value: cw_carArray[0].car,
-      dist: Math.abs(((cw_carArray[0].getPosition().x + 6) * minimapscale) - coords.x),
-      x: cw_carArray[0].getPosition().x
-    }
+      dist: Math.abs(
+        (cw_carArray[0].getPosition().x + 6) * minimapscale - coords.x,
+      ),
+      x: cw_carArray[0].getPosition().x,
+    };
 
     var maxX = 0;
     for (var i = 0; i < cw_carArray.length; i++) {
       var pos = cw_carArray[i].getPosition();
-      var dist = Math.abs(((pos.x + 6) * minimapscale) - coords.x);
+      var dist = Math.abs((pos.x + 6) * minimapscale - coords.x);
       if (dist < closest.dist) {
         closest.value = cw_carArray[i].car;
         closest.dist = dist;
@@ -2141,38 +2230,42 @@ function createNormal(prop, generator) {
       maxX = Math.max(pos.x, maxX);
     }
 
-    if (closest.x == maxX) { // focus on leader again
+    if (closest.x == maxX) {
+      // focus on leader again
       cw_setCameraTarget(-1);
     } else {
       cw_setCameraTarget(closest.value);
     }
-  }
+  };
 
+  document
+    .querySelector("#mutationrate")
+    .addEventListener("change", function (e) {
+      var elem = e.target;
+      cw_setMutation(elem.options[elem.selectedIndex].value);
+    });
 
-  document.querySelector("#mutationrate").addEventListener("change", function (e) {
-    var elem = e.target
-    cw_setMutation(elem.options[elem.selectedIndex].value)
-  })
-
-  document.querySelector("#mutationsize").addEventListener("change", function (e) {
-    var elem = e.target
-    cw_setMutationRange(elem.options[elem.selectedIndex].value)
-  })
+  document
+    .querySelector("#mutationsize")
+    .addEventListener("change", function (e) {
+      var elem = e.target;
+      cw_setMutationRange(elem.options[elem.selectedIndex].value);
+    });
 
   document.querySelector("#floor").addEventListener("change", function (e) {
-    var elem = e.target
-    cw_setMutableFloor(elem.options[elem.selectedIndex].value)
+    var elem = e.target;
+    cw_setMutableFloor(elem.options[elem.selectedIndex].value);
   });
 
   document.querySelector("#gravity").addEventListener("change", function (e) {
-    var elem = e.target
-    cw_setGravity(elem.options[elem.selectedIndex].value)
-  })
+    var elem = e.target;
+    cw_setGravity(elem.options[elem.selectedIndex].value);
+  });
 
   document.querySelector("#elitesize").addEventListener("change", function (e) {
-    var elem = e.target
-    cw_setEliteSize(elem.options[elem.selectedIndex].value)
-  })
+    var elem = e.target;
+    cw_setEliteSize(elem.options[elem.selectedIndex].value);
+  });
 
   function cw_setMutation(mutation) {
     generationConfig.constants.gen_mutation = parseFloat(mutation);
@@ -2183,12 +2276,12 @@ function createNormal(prop, generator) {
   }
 
   function cw_setMutableFloor(choice) {
-    world_def.mutable_floor = (choice == 1);
+    world_def.mutable_floor = choice == 1;
   }
 
   function cw_setGravity(choice) {
     world_def.gravity = new b2Vec2(0.0, -parseFloat(choice));
-    var world = currentRunner.scene.world
+    var world = currentRunner.scene.world;
     // CHECK GRAVITY CHANGES
     if (world.GetGravity().y != world_def.gravity.y) {
       world.SetGravity(world_def.gravity);
@@ -2199,10 +2292,8 @@ function createNormal(prop, generator) {
     generationConfig.constants.championLength = parseInt(clones, 10);
   }
 
-// Expose to global scope for inline onclick handlers in index.html
+  // Expose to global scope for inline onclick handlers in index.html
   window.cw_setCameraTarget = cw_setCameraTarget;
 
   cw_init();
-
-
 })();
