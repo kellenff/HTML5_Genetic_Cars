@@ -21,19 +21,20 @@
 
 ## Overview
 
-`HTML5_Genetic_Cars` is a static browser app that evolves 2D cars over procedurally generated terrain. There is no build pipeline: open `index.html` directly in a browser, or serve the repository root with a simple static file server if the browser blocks local file access.
+`HTML5_Genetic_Cars` is a Vite-based SPA that evolves 2D cars over procedurally generated terrain. Run `yarn dev` to start the dev server at localhost:5173, or `yarn build && yarn preview` for a production build.
 
 The runtime is intentionally minimal:
 
 - `index.html` defines the entire UI shell: canvases, control buttons, form inputs, score panels, and explanatory text.
 - `styles.css` contains all layout and widget styling.
 - `src/app.js` is a hand-bundled single-file application containing the simulation, genetic algorithm logic, rendering, replay support, and DOM event wiring.
-- `lib/box2d.js` and `lib/seedrandom.js` are vendored runtime dependencies loaded directly by the page, alongside external `d3` and `vis` assets from CDNs.
+- `src/main.js` is the Vite entry point (one line: `import "./app.js"`).
+- `public/lib/box2d.js` and `public/lib/seedrandom.js` are vendored runtime dependencies loaded as classic `<script>` tags (outside Vite's module graph).
 
 ## How the app boots
 
-1. `index.html` loads external `vis` CSS, local `styles.css`, vendored libraries in `lib/`, external `d3`/`vis` scripts, and finally `src/app.js`.
-2. `src/app.js` executes immediately inside an IIFE and resolves all required DOM nodes up front.
+1. `index.html` loads local `styles.css`, vendored libraries from `public/lib/` as classic scripts (seedrandom then box2d), and `src/main.js` as a module entry point.
+2. `src/main.js` imports `src/app.js`, which executes immediately inside an IIFE and resolves all required DOM nodes up front.
 3. The main entry section starts around `src/app.js:1453` (`index.js (main entry)`). It initializes global state, creates the first generation, builds the world, wires UI event listeners, and starts the animation loop.
 4. The simulation advances through `requestAnimationFrame`, while Box2D stepping is handled inside the current runner created by `worldRun(...)`.
 
@@ -141,10 +142,10 @@ Any change to generation data structures should preserve or deliberately migrate
 
 ## Running and verifying
 
-- Primary path: open `index.html` in a browser.
-- Safer path: run `python3 -m http.server 8000` from the repository root and visit `http://localhost:8000`.
-- There is no package manager, bundler, or formal test runner in the repository.
-- Verification is manual: confirm the page loads, cars spawn, generations advance, graphs render, and UI controls still respond.
+- Dev: `yarn dev` — starts Vite at http://localhost:5173.
+- Production: `yarn build && yarn preview` — builds to `dist/` and serves at http://localhost:4173.
+- Uses Yarn Berry PnP (no `node_modules/`). After cloning, run `yarn install`.
+- No automated test suite yet. Verification is manual: confirm the page loads, cars spawn, generations advance, graphs render, and UI controls still respond.
 
 ## Suggested documentation maintenance rules
 

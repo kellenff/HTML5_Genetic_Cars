@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-HTML5 genetic algorithm car evolver using Box2D physics. Inspired by BoxCar2D, written from scratch. Static browser app with no build step.
+HTML5 genetic algorithm car evolver using Box2D physics. Inspired by BoxCar2D, written from scratch. Vite-based SPA with Yarn Berry PnP.
 
 ## Architecture
 
@@ -26,18 +26,16 @@ Key sections in `src/app.js` (look for banner comments):
 
 ## Running
 
-Open `index.html` in a browser. No npm, no bundler.
-
-If the browser blocks local file access:
-
 ```
-python3 -m http.server 8000
+yarn dev
 ```
+
+Opens at http://localhost:5173. For production build: `yarn build && yarn preview`.
 
 ## Dependencies
 
-- `lib/box2d.js` and `lib/seedrandom.js` are vendored (committed to repo)
-- External CDNs: d3 v3, vis 4.20.0 (loaded in index.html)
+- `public/lib/box2d.js` and `public/lib/seedrandom.js` are vendored (served as classic scripts from `public/`, outside Vite's module graph)
+- Vite 6 (dev dependency, managed by Yarn Berry PnP)
 
 ## Testing
 
