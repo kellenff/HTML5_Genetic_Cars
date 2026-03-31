@@ -2186,6 +2186,7 @@
     setupCarUI();
     cw_drawMiniMap();
     cw_startSimulation();
+    document.querySelector('[value="Watch Leader"]').disabled = false;
   }
 
   function relMouseCoords(event) {
