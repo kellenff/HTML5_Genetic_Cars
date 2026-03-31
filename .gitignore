@@ -216,8 +216,8 @@ pip-log.txt
 #Mr Developer
 .mr.developer.cfg
 
-# Claude Code (local overrides)
-.claude/settings.local.json
+# Claude Code workspace (local runs, traces, settings)
+.claude/
 
 # Vite
 dist/
