@@ -6,501 +6,12 @@ import { carRun } from "./physics/run.js";
 import { manageRound } from "./genetics/manage-round.js";
 import { manageRoundSA } from "./genetics/manage-round-sa.js";
 import { generationConfig } from "./generation-config.js";
-
-/* -------------------------------------------------------------------------
- * ghost/car-to-ghost.js
- * ------------------------------------------------------------------------- */
-
-function ghost_get_frame(car) {
-  var out = {
-    chassis: ghost_get_chassis(car.chassis),
-    wheels: [],
-    pos: { x: car.chassis.GetPosition().x, y: car.chassis.GetPosition().y },
-  };
-
-  for (var i = 0; i < car.wheels.length; i++) {
-    out.wheels[i] = ghost_get_wheel(car.wheels[i]);
-  }
-
-  return out;
-}
-
-function ghost_get_chassis(c) {
-  var gc = [];
-
-  for (var f = c.GetFixtureList(); f; f = f.m_next) {
-    var s = f.GetShape();
-
-    var p = {
-      vtx: [],
-      num: 0,
-    };
-
-    p.num = s.m_vertexCount;
-
-    for (var i = 0; i < s.m_vertexCount; i++) {
-      p.vtx.push(c.GetWorldPoint(s.m_vertices[i]));
-    }
-
-    gc.push(p);
-  }
-
-  return gc;
-}
-
-function ghost_get_wheel(w) {
-  var gw = [];
-
-  for (var f = w.GetFixtureList(); f; f = f.m_next) {
-    var s = f.GetShape();
-
-    var c = {
-      pos: w.GetWorldPoint(s.m_p),
-      rad: s.m_radius,
-      ang: w.m_sweep.a,
-    };
-
-    gw.push(c);
-  }
-
-  return gw;
-}
-
-/* -------------------------------------------------------------------------
- * ghost/index.js
- * ------------------------------------------------------------------------- */
-var ghost_fns = (function () {
-  var enable_ghost = true;
-
-  function ghost_create_replay() {
-    if (!enable_ghost) return null;
-
-    return {
-      num_frames: 0,
-      frames: [],
-    };
-  }
-
-  function ghost_create_ghost() {
-    if (!enable_ghost) return null;
-
-    return {
-      replay: null,
-      frame: 0,
-      dist: -100,
-    };
-  }
-
-  function ghost_reset_ghost(ghost) {
-    if (!enable_ghost) return;
-    if (ghost == null) return;
-    ghost.frame = 0;
-  }
-
-  function ghost_pause(ghost) {
-    if (ghost != null) ghost.old_frame = ghost.frame;
-    ghost_reset_ghost(ghost);
-  }
-
-  function ghost_resume(ghost) {
-    if (ghost != null) ghost.frame = ghost.old_frame;
-  }
-
-  function ghost_get_position(ghost) {
-    if (!enable_ghost) return;
-    if (ghost == null) return;
-    if (ghost.frame < 0) return;
-    if (ghost.replay == null) return;
-    var frame = ghost.replay.frames[ghost.frame];
-    if (!frame) return;
-    return frame.pos;
-  }
-
-  function ghost_compare_to_replay(replay, ghost, max) {
-    if (!enable_ghost) return;
-    if (ghost == null) return;
-    if (replay == null) return;
-
-    if (ghost.dist < max) {
-      ghost.replay = replay;
-      ghost.dist = max;
-      ghost.frame = 0;
-    }
-  }
-
-  function ghost_move_frame(ghost) {
-    if (!enable_ghost) return;
-    if (ghost == null) return;
-    if (ghost.replay == null) return;
-    ghost.frame++;
-    if (ghost.frame >= ghost.replay.num_frames)
-      ghost.frame = ghost.replay.num_frames - 1;
-  }
-
-  function ghost_add_replay_frame(replay, car) {
-    if (!enable_ghost) return;
-    if (replay == null) return;
-
-    var frame = ghost_get_frame(car);
-    replay.frames.push(frame);
-    replay.num_frames++;
-  }
-
-  function ghost_draw_frame(ctx, ghost, camera) {
-    var zoom = camera.zoom;
-    if (!enable_ghost) return;
-    if (ghost == null) return;
-    if (ghost.frame < 0) return;
-    if (ghost.replay == null) return;
-
-    var frame = ghost.replay.frames[ghost.frame];
-    if (!frame) return;
-
-    // wheel style
-    ctx.fillStyle = "#eee";
-    ctx.strokeStyle = "#aaa";
-    ctx.lineWidth = 1 / zoom;
-
-    for (var i = 0; i < frame.wheels.length; i++) {
-      for (var w in frame.wheels[i]) {
-        ghost_draw_circle(
-          ctx,
-          frame.wheels[i][w].pos,
-          frame.wheels[i][w].rad,
-          frame.wheels[i][w].ang,
-        );
-      }
-    }
-
-    // chassis style
-    ctx.strokeStyle = "#aaa";
-    ctx.fillStyle = "#eee";
-    ctx.lineWidth = 1 / zoom;
-    ctx.beginPath();
-    for (var c in frame.chassis)
-      ghost_draw_poly(ctx, frame.chassis[c].vtx, frame.chassis[c].num);
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  function ghost_draw_poly(ctx, vtx, n_vtx) {
-    ctx.moveTo(vtx[0].x, vtx[0].y);
-    for (var i = 1; i < n_vtx; i++) {
-      ctx.lineTo(vtx[i].x, vtx[i].y);
-    }
-    ctx.lineTo(vtx[0].x, vtx[0].y);
-  }
-
-  function ghost_draw_circle(ctx, center, radius, angle) {
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI, true);
-
-    ctx.moveTo(center.x, center.y);
-    ctx.lineTo(
-      center.x + radius * Math.cos(angle),
-      center.y + radius * Math.sin(angle),
-    );
-
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  return {
-    ghost_create_replay: ghost_create_replay,
-    ghost_create_ghost: ghost_create_ghost,
-    ghost_pause: ghost_pause,
-    ghost_resume: ghost_resume,
-    ghost_get_position: ghost_get_position,
-    ghost_compare_to_replay: ghost_compare_to_replay,
-    ghost_move_frame: ghost_move_frame,
-    ghost_add_replay_frame: ghost_add_replay_frame,
-    ghost_draw_frame: ghost_draw_frame,
-    ghost_reset_ghost: ghost_reset_ghost,
-  };
-})();
-
-/* -------------------------------------------------------------------------
- * draw/draw-virtual-poly.js
- * ------------------------------------------------------------------------- */
-
-function cw_drawVirtualPoly(ctx, body, vtx, n_vtx) {
-  // set strokestyle and fillstyle before call
-  // call beginPath before call
-
-  var p0 = body.GetWorldPoint(vtx[0]);
-  ctx.moveTo(p0.x, p0.y);
-  for (var i = 1; i < n_vtx; i++) {
-    var p = body.GetWorldPoint(vtx[i]);
-    ctx.lineTo(p.x, p.y);
-  }
-  ctx.lineTo(p0.x, p0.y);
-}
-
-/* -------------------------------------------------------------------------
- * draw/draw-circle.js
- * ------------------------------------------------------------------------- */
-
-function cw_drawCircle(ctx, body, center, radius, angle, color) {
-  var p = body.GetWorldPoint(center);
-  ctx.fillStyle = color;
-
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI, true);
-
-  ctx.moveTo(p.x, p.y);
-  ctx.lineTo(p.x + radius * Math.cos(angle), p.y + radius * Math.sin(angle));
-
-  ctx.fill();
-  ctx.stroke();
-}
-
-/* -------------------------------------------------------------------------
- * draw/draw-floor.js
- * ------------------------------------------------------------------------- */
-
-function cw_drawFloor(ctx, camera, cw_floorTiles) {
-  var camera_x = camera.pos.x;
-  var zoom = camera.zoom;
-  ctx.strokeStyle = "#000";
-  ctx.fillStyle = "#777";
-  ctx.lineWidth = 1 / zoom;
-  ctx.beginPath();
-
-  var k;
-  if (camera.pos.x - 10 > 0) {
-    k = Math.floor((camera.pos.x - 10) / 1.5);
-  } else {
-    k = 0;
-  }
-
-  outer_loop: for (k; k < cw_floorTiles.length; k++) {
-    var b = cw_floorTiles[k];
-    for (var f = b.GetFixtureList(); f; f = f.m_next) {
-      var s = f.GetShape();
-      var shapePosition = b.GetWorldPoint(s.m_vertices[0]).x;
-      if (shapePosition > camera_x - 5 && shapePosition < camera_x + 10) {
-        cw_drawVirtualPoly(ctx, b, s.m_vertices, s.m_vertexCount);
-      }
-      if (shapePosition > camera_x + 10) {
-        break outer_loop;
-      }
-    }
-  }
-  ctx.fill();
-  ctx.stroke();
-}
-
-/* -------------------------------------------------------------------------
- * draw/scatter-plot.js
- * ------------------------------------------------------------------------- */
-
-// Called when the Visualization API is loaded.
-
-/* -------------------------------------------------------------------------
- * draw/plot-graphs.js
- * ------------------------------------------------------------------------- */
-
-var graph_fns = {
-  plotGraphs: function (
-    graphElem,
-    topScoresElem,
-    scatterPlotElem,
-    lastState,
-    scores,
-    config,
-  ) {
-    lastState = lastState || {};
-    var generationSize = scores.length;
-    var graphcanvas = graphElem;
-    var graphctx = graphcanvas.getContext("2d");
-    var graphwidth = 400;
-    var graphheight = 250;
-    var nextState = cw_storeGraphScores(lastState, scores, generationSize);
-    cw_clearGraphics(graphcanvas, graphctx, graphwidth, graphheight);
-    cw_plotAverage(nextState, graphctx);
-    cw_plotElite(nextState, graphctx);
-    cw_plotTop(nextState, graphctx);
-    cw_listTopScores(topScoresElem, nextState);
-    return nextState;
-  },
-};
-
-function cw_storeGraphScores(lastState, cw_carScores, generationSize) {
-  return {
-    cw_topScores: (lastState.cw_topScores || []).concat([
-      cw_carScores[0].score,
-    ]),
-    cw_graphAverage: (lastState.cw_graphAverage || []).concat([
-      cw_average(cw_carScores, generationSize),
-    ]),
-    cw_graphElite: (lastState.cw_graphElite || []).concat([
-      cw_eliteaverage(cw_carScores, generationSize),
-    ]),
-    cw_graphTop: (lastState.cw_graphTop || []).concat([
-      cw_carScores[0].score.v,
-    ]),
-  };
-}
-
-function cw_plotTop(state, graphctx) {
-  var cw_graphTop = state.cw_graphTop;
-  var graphsize = cw_graphTop.length;
-  graphctx.strokeStyle = "#C83B3B";
-  graphctx.beginPath();
-  graphctx.moveTo(0, 0);
-  for (var k = 0; k < graphsize; k++) {
-    graphctx.lineTo((400 * (k + 1)) / graphsize, cw_graphTop[k]);
-  }
-  graphctx.stroke();
-}
-
-function cw_plotElite(state, graphctx) {
-  var cw_graphElite = state.cw_graphElite;
-  var graphsize = cw_graphElite.length;
-  graphctx.strokeStyle = "#7BC74D";
-  graphctx.beginPath();
-  graphctx.moveTo(0, 0);
-  for (var k = 0; k < graphsize; k++) {
-    graphctx.lineTo((400 * (k + 1)) / graphsize, cw_graphElite[k]);
-  }
-  graphctx.stroke();
-}
-
-function cw_plotAverage(state, graphctx) {
-  var cw_graphAverage = state.cw_graphAverage;
-  var graphsize = cw_graphAverage.length;
-  graphctx.strokeStyle = "#3F72AF";
-  graphctx.beginPath();
-  graphctx.moveTo(0, 0);
-  for (var k = 0; k < graphsize; k++) {
-    graphctx.lineTo((400 * (k + 1)) / graphsize, cw_graphAverage[k]);
-  }
-  graphctx.stroke();
-}
-
-function cw_eliteaverage(scores, generationSize) {
-  var sum = 0;
-  for (var k = 0; k < Math.floor(generationSize / 2); k++) {
-    sum += scores[k].score.v;
-  }
-  return sum / Math.floor(generationSize / 2);
-}
-
-function cw_average(scores, generationSize) {
-  var sum = 0;
-  for (var k = 0; k < generationSize; k++) {
-    sum += scores[k].score.v;
-  }
-  return sum / generationSize;
-}
-
-function cw_clearGraphics(graphcanvas, graphctx, graphwidth, graphheight) {
-  graphcanvas.width = graphcanvas.width;
-  graphctx.translate(0, graphheight);
-  graphctx.scale(1, -1);
-  graphctx.lineWidth = 1;
-  graphctx.strokeStyle = "#3F72AF";
-  graphctx.beginPath();
-  graphctx.moveTo(0, graphheight / 2);
-  graphctx.lineTo(graphwidth, graphheight / 2);
-  graphctx.moveTo(0, graphheight / 4);
-  graphctx.lineTo(graphwidth, graphheight / 4);
-  graphctx.moveTo(0, (graphheight * 3) / 4);
-  graphctx.lineTo(graphwidth, (graphheight * 3) / 4);
-  graphctx.stroke();
-}
-
-function cw_listTopScores(elem, state) {
-  var cw_topScores = state.cw_topScores;
-  var ts = elem;
-  ts.innerHTML = "<b>Top Scores:</b><br />";
-  cw_topScores.sort(function (a, b) {
-    if (a.v > b.v) {
-      return -1;
-    } else {
-      return 1;
-    }
-  });
-
-  for (var k = 0; k < Math.min(10, cw_topScores.length); k++) {
-    var topScore = cw_topScores[k];
-    var n = "#" + (k + 1) + ":";
-    var score = Math.round(topScore.v * 100) / 100;
-    var distance = "d:" + Math.round(topScore.x * 100) / 100;
-    var yrange =
-      "h:" +
-      Math.round(topScore.y2 * 100) / 100 +
-      "/" +
-      Math.round(topScore.y * 100) / 100 +
-      "m";
-    var gen = "(Gen " + cw_topScores[k].i + ")";
-
-    ts.innerHTML += [n, score, distance, yrange, gen].join(" ") + "<br />";
-  }
-}
-
-/* -------------------------------------------------------------------------
- * draw/draw-car.js
- * ------------------------------------------------------------------------- */
-
-function drawCar(car_constants, myCar, camera, ctx) {
-  var camera_x = camera.pos.x;
-  var zoom = camera.zoom;
-
-  var wheelMinDensity = car_constants.wheelMinDensity;
-  var wheelDensityRange = car_constants.wheelDensityRange;
-
-  if (!myCar.alive) {
-    return;
-  }
-  var myCarPos = myCar.getPosition();
-
-  if (myCarPos.x < camera_x - 5) {
-    // too far behind, don't draw
-    return;
-  }
-
-  ctx.strokeStyle = "#444";
-  ctx.lineWidth = 1 / zoom;
-
-  var wheels = myCar.car.car.wheels;
-
-  for (var i = 0; i < wheels.length; i++) {
-    var b = wheels[i];
-    for (var f = b.GetFixtureList(); f; f = f.m_next) {
-      var s = f.GetShape();
-      var color = Math.round(
-        255 - (255 * (f.m_density - wheelMinDensity)) / wheelDensityRange,
-      ).toString();
-      var rgbcolor = "rgb(" + color + "," + color + "," + color + ")";
-      cw_drawCircle(ctx, b, s.m_p, s.m_radius, b.m_sweep.a, rgbcolor);
-    }
-  }
-
-  if (myCar.is_elite) {
-    ctx.strokeStyle = "#3F72AF";
-    ctx.fillStyle = "#DBE2EF";
-  } else {
-    ctx.strokeStyle = "#F7C873";
-    ctx.fillStyle = "#FAEBCD";
-  }
-  ctx.beginPath();
-
-  var chassis = myCar.car.car.chassis;
-
-  for (f = chassis.GetFixtureList(); f; f = f.m_next) {
-    var cs = f.GetShape();
-    cw_drawVirtualPoly(ctx, chassis, cs.m_vertices, cs.m_vertexCount);
-  }
-  ctx.fill();
-  ctx.stroke();
-}
-
-/* -------------------------------------------------------------------------
- * draw/draw-car-stats.js
- * ------------------------------------------------------------------------- */
-
-var run = carRun;
+import { setupScene } from "./physics/setup-scene.js";
+import { worldRun } from "./physics/world-run.js";
+import { drawFloor } from "./rendering/draw-floor.js";
+import { drawCar } from "./rendering/draw-car.js";
+import { plotGraphs, clearGraphics } from "./rendering/graphs.js";
+import * as ghostModule from "./ghost/ghost.js";
 
 /* ========================================================================= */
 /* === Car ================================================================= */
@@ -542,7 +53,7 @@ cw_Car.prototype.kill = function (currentRunner, constants) {
   this.minimapmarker.style.borderLeft = "1px solid #ccc";
   var finishLine = currentRunner.scene.finishLine;
   var max_car_health = constants.max_car_health;
-  var status = run.getStatus(this.car.state, {
+  var status = carRun.getStatus(this.car.state, {
     finishLine: finishLine,
     max_car_health: max_car_health,
   });
@@ -561,200 +72,11 @@ cw_Car.prototype.kill = function (currentRunner, constants) {
 };
 
 /* -------------------------------------------------------------------------
- * world/setup-scene.js
- * ------------------------------------------------------------------------- */
-
-/*
-
-world_def = {
-  gravity: {x, y},
-  doSleep: boolean,
-  floorseed: string,
-  tileDimensions,
-  maxFloorTiles,
-  mutable_floor: boolean
-}
-
-*/
-
-function setupScene(world_def) {
-  var world = new b2World(world_def.gravity, world_def.doSleep);
-  var floorTiles = cw_createFloor(
-    world,
-    world_def.floorseed,
-    world_def.tileDimensions,
-    world_def.maxFloorTiles,
-    world_def.mutable_floor,
-  );
-
-  var last_tile = floorTiles[floorTiles.length - 1];
-  var last_fixture = last_tile.GetFixtureList();
-  var tile_position = last_tile.GetWorldPoint(
-    last_fixture.GetShape().m_vertices[3],
-  );
-  var finishLine = tile_position.x + 5;
-  world.finishLine = finishLine;
-  return {
-    world: world,
-    floorTiles: floorTiles,
-    finishLine: finishLine,
-  };
-}
-
-function cw_createFloor(
-  world,
-  floorseed,
-  dimensions,
-  maxFloorTiles,
-  mutable_floor,
-) {
-  var last_tile = null;
-  var tile_position = new b2Vec2(-5, 0);
-  var cw_floorTiles = [];
-  Math.seedrandom(floorseed);
-  for (var k = 0; k < maxFloorTiles; k++) {
-    if (!mutable_floor) {
-      // keep old impossible tracks if not using mutable floors
-      last_tile = cw_createFloorTile(
-        world,
-        dimensions,
-        tile_position,
-        ((Math.random() * 3 - 1.5) * 1.5 * k) / maxFloorTiles,
-      );
-    } else {
-      // if path is mutable over races, create smoother tracks
-      last_tile = cw_createFloorTile(
-        world,
-        dimensions,
-        tile_position,
-        ((Math.random() * 3 - 1.5) * 1.2 * k) / maxFloorTiles,
-      );
-    }
-    cw_floorTiles.push(last_tile);
-    var last_fixture = last_tile.GetFixtureList();
-    tile_position = last_tile.GetWorldPoint(
-      last_fixture.GetShape().m_vertices[3],
-    );
-  }
-  return cw_floorTiles;
-}
-
-function cw_createFloorTile(world, dim, position, angle) {
-  var body_def = new b2BodyDef();
-
-  body_def.position.Set(position.x, position.y);
-  var body = world.CreateBody(body_def);
-  var fix_def = new b2FixtureDef();
-  fix_def.shape = new b2PolygonShape();
-  fix_def.friction = 0.5;
-
-  var coords = new Array();
-  coords.push(new b2Vec2(0, 0));
-  coords.push(new b2Vec2(0, -dim.y));
-  coords.push(new b2Vec2(dim.x, -dim.y));
-  coords.push(new b2Vec2(dim.x, 0));
-
-  var center = new b2Vec2(0, 0);
-
-  var newcoords = cw_rotateFloorTile(coords, center, angle);
-
-  fix_def.shape.SetAsArray(newcoords);
-
-  body.CreateFixture(fix_def);
-  return body;
-}
-
-function cw_rotateFloorTile(coords, center, angle) {
-  return coords.map(function (coord) {
-    return {
-      x:
-        Math.cos(angle) * (coord.x - center.x) -
-        Math.sin(angle) * (coord.y - center.y) +
-        center.x,
-      y:
-        Math.sin(angle) * (coord.x - center.x) +
-        Math.cos(angle) * (coord.y - center.y) +
-        center.y,
-    };
-  });
-}
-
-/* -------------------------------------------------------------------------
- * world/run.js
- * ------------------------------------------------------------------------- */
-function worldRun(world_def, defs, listeners) {
-  if (world_def.mutable_floor) {
-    // GHOST DISABLED
-    world_def.floorseed = btoa(Math.seedrandom());
-  }
-
-  var scene = setupScene(world_def);
-  world_def.finishLine = scene.finishLine;
-  scene.world.Step(1 / world_def.box2dfps, 20, 20);
-  var cars = defs.map((def, i) => {
-    return {
-      index: i,
-      def: def,
-      car: defToCar(def, scene.world, world_def),
-      state: carRun.getInitialState(world_def),
-    };
-  });
-  var alivecars = cars;
-  return {
-    scene: scene,
-    cars: cars,
-    step: function () {
-      if (alivecars.length === 0) {
-        throw new Error("no more cars");
-      }
-      scene.world.Step(1 / world_def.box2dfps, 20, 20);
-      listeners.preCarStep();
-      alivecars = alivecars.filter(function (car) {
-        car.state = carRun.updateState(world_def, car.car, car.state);
-        var status = carRun.getStatus(car.state, world_def);
-        listeners.carStep(car);
-        if (status === 0) {
-          return true;
-        }
-        car.score = carRun.calculateScore(car.state, world_def);
-        listeners.carDeath(car);
-
-        var world = scene.world;
-        var worldCar = car.car;
-        world.DestroyBody(worldCar.chassis);
-
-        for (var w = 0; w < worldCar.wheels.length; w++) {
-          world.DestroyBody(worldCar.wheels[w]);
-        }
-
-        return false;
-      });
-      if (alivecars.length === 0) {
-        listeners.generationEnd(cars);
-      }
-    },
-  };
-}
-
-/* -------------------------------------------------------------------------
  * index.js (main entry)
  * ------------------------------------------------------------------------- */
 // Global Vars
 
-var plot_graphs = graph_fns.plotGraphs;
-
-var ghost_draw_frame = ghost_fns.ghost_draw_frame;
-var ghost_create_ghost = ghost_fns.ghost_create_ghost;
-var ghost_add_replay_frame = ghost_fns.ghost_add_replay_frame;
-var ghost_compare_to_replay = ghost_fns.ghost_compare_to_replay;
-var ghost_get_position = ghost_fns.ghost_get_position;
-var ghost_move_frame = ghost_fns.ghost_move_frame;
-var ghost_reset_ghost = ghost_fns.ghost_reset_ghost;
-var ghost_pause = ghost_fns.ghost_pause;
-var ghost_resume = ghost_fns.ghost_resume;
-var ghost_create_replay = ghost_fns.ghost_create_replay;
-
-var ghost;
+var ghostState;
 var carMap = new Map();
 
 var doDraw = true;
@@ -896,8 +218,8 @@ function cw_drawScreen() {
   var zoom = camera.zoom;
   ctx.translate(200 - camera_x * zoom, 200 + camera_y * zoom);
   ctx.scale(zoom, -zoom);
-  cw_drawFloor(ctx, camera, floorTiles);
-  ghost_draw_frame(ctx, ghost, camera);
+  drawFloor(ctx, camera, floorTiles);
+  ghostModule.drawFrame(ctx, ghostState, camera);
   cw_drawCars();
   ctx.restore();
 }
@@ -944,7 +266,7 @@ function cw_setCameraPosition() {
 
 function cw_drawGhostReplay() {
   var floorTiles = currentRunner.scene.floorTiles;
-  var carPosition = ghost_get_position(ghost);
+  var carPosition = ghostModule.getPosition(ghostState);
   if (!carPosition) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -952,7 +274,7 @@ function cw_drawGhostReplay() {
     var zoom = camera.zoom;
     ctx.translate(200 - camera.pos.x * zoom, 200 + camera.pos.y * zoom);
     ctx.scale(zoom, -zoom);
-    cw_drawFloor(ctx, camera, floorTiles);
+    drawFloor(ctx, camera, floorTiles);
     ctx.restore();
     return;
   }
@@ -970,9 +292,9 @@ function cw_drawGhostReplay() {
     200 + carPosition.y * camera.zoom,
   );
   ctx.scale(camera.zoom, -camera.zoom);
-  ghost_draw_frame(ctx, ghost, camera);
-  ghost_move_frame(ghost);
-  cw_drawFloor(ctx, camera, floorTiles);
+  ghostModule.drawFrame(ctx, ghostState, camera);
+  ghostModule.moveFrame(ghostState);
+  drawFloor(ctx, camera, floorTiles);
   ctx.restore();
 }
 
@@ -1035,7 +357,7 @@ function cw_drawMiniMap() {
 /* ========================================================================= */
 var uiListeners = {
   preCarStep: function () {
-    ghost_move_frame(ghost);
+    ghostModule.moveFrame(ghostState);
   },
   carStep(car) {
     updateCarUI(car);
@@ -1053,7 +375,7 @@ var uiListeners = {
       cw_setCameraTarget(-1);
     }
 
-    ghost_compare_to_replay(cwCar.replay, ghost, score.v);
+    ghostModule.compareToReplay(cwCar.replay, ghostState, score.v);
     carMap.delete(carInfo);
 
     score.i = generationState.counter;
@@ -1104,7 +426,7 @@ function updateCarUI(carInfo) {
   var car = carMap.get(carInfo);
   var position = car.getPosition();
 
-  ghost_add_replay_frame(car.replay, car.car.car);
+  ghostModule.addReplayFrame(car.replay, car.car.car);
   car.minimapmarker.style.left =
     Math.round((position.x + 5) * minimapscale) + "px";
   car.healthBar.width =
@@ -1145,7 +467,7 @@ function cleanupRound(results) {
       return 1;
     }
   });
-  graphState = plot_graphs(
+  graphState = plotGraphs(
     document.getElementById("graphcanvas"),
     document.getElementById("topscores"),
     null,
@@ -1170,10 +492,10 @@ function cw_newRound(results) {
     generationConfig(),
   );
   if (world_def.mutable_floor) {
-    ghost = null;
+    ghostState = null;
     world_def.floorseed = btoa(Math.seedrandom());
   } else {
-    ghost_reset_ghost(ghost);
+    ghostModule.resetGhost(ghostState);
   }
   currentRunner = worldRun(world_def, generationState.generation, uiListeners);
   setupCarUI();
@@ -1205,7 +527,7 @@ function cw_resetPopulationUI() {
   document.getElementById("cars").innerHTML = "";
   document.getElementById("topscores").innerHTML = "";
   var _gc = document.getElementById("graphcanvas");
-  cw_clearGraphics(_gc, _gc.getContext("2d"), 400, 250);
+  clearGraphics(_gc, _gc.getContext("2d"), 400, 250);
   resetGraphState();
 }
 
@@ -1220,7 +542,7 @@ function cw_resetWorld() {
   cw_generationZero();
   currentRunner = worldRun(world_def, generationState.generation, uiListeners);
 
-  ghost = ghost_create_ghost();
+  ghostState = ghostModule.createGhost();
   resetCarUI();
   setupCarUI();
   cw_drawMiniMap();
@@ -1232,8 +554,8 @@ function setupCarUI() {
   currentRunner.cars.map(function (carInfo) {
     var car = new cw_Car(carInfo, carMap);
     carMap.set(carInfo, car);
-    car.replay = ghost_create_replay();
-    ghost_add_replay_frame(car.replay, car.car.car);
+    car.replay = ghostModule.createReplay();
+    ghostModule.addReplayFrame(car.replay, car.car.car);
   });
 }
 
@@ -1265,7 +587,7 @@ document
     cw_resetPopulationUI();
     Math.seedrandom();
     cw_generationZero();
-    ghost = ghost_create_ghost();
+    ghostState = ghostModule.createGhost();
     currentRunner = worldRun(
       world_def,
       generationState.generation,
@@ -1280,7 +602,7 @@ document
 function saveProgress() {
   localStorage.cw_savedGeneration = JSON.stringify(generationState.generation);
   localStorage.cw_genCounter = generationState.counter;
-  localStorage.cw_ghost = JSON.stringify(ghost);
+  localStorage.cw_ghost = JSON.stringify(ghostState);
   localStorage.cw_topScores = JSON.stringify(graphState.cw_topScores);
   localStorage.cw_floorSeed = world_def.floorseed;
 }
@@ -1297,7 +619,7 @@ function restoreProgress() {
   cw_clearPopulationWorld();
   generationState.generation = JSON.parse(localStorage.cw_savedGeneration);
   generationState.counter = localStorage.cw_genCounter;
-  ghost = JSON.parse(localStorage.cw_ghost);
+  ghostState = JSON.parse(localStorage.cw_ghost);
   graphState.cw_topScores = JSON.parse(localStorage.cw_topScores);
   world_def.floorseed = localStorage.cw_floorSeed;
   document.getElementById("newseed").value = world_def.floorseed;
@@ -1327,11 +649,11 @@ function cw_confirmResetWorld() {
 
 function cw_pauseSimulation() {
   cw_stopSimulation();
-  ghost_pause(ghost);
+  ghostModule.pause(ghostState);
 }
 
 function cw_resumeSimulation() {
-  ghost_resume(ghost);
+  ghostModule.resume(ghostState);
   cw_startSimulation();
 }
 
@@ -1394,7 +716,7 @@ function cw_init() {
   hbar.parentNode.removeChild(hbar);
   world_def.floorseed = btoa(Math.seedrandom());
   cw_generationZero();
-  ghost = ghost_create_ghost();
+  ghostState = ghostModule.createGhost();
   resetCarUI();
   currentRunner = worldRun(world_def, generationState.generation, uiListeners);
   setupCarUI();
