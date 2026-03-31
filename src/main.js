@@ -23,7 +23,7 @@ import { createGameLoop, createFastLoop } from "./ui/game-loop.js";
 import { createGhostReplay } from "./ui/ghost-replay.js";
 
 /* -------------------------------------------------------------------------
- * index.js (main entry)
+ * main.js (orchestrator)
  * ------------------------------------------------------------------------- */
 // Global Vars
 
