@@ -1,0 +1,11 @@
+export const carConstantsData = {
+  wheelCount: 2,
+  wheelMinRadius: 0.2,
+  wheelRadiusRange: 0.5,
+  wheelMinDensity: 40,
+  wheelDensityRange: 100,
+  chassisDensityRange: 300,
+  chassisMinDensity: 30,
+  chassisMinAxis: 0.1,
+  chassisAxisRange: 1.1,
+};
