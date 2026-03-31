@@ -1,8 +1,13 @@
 import { createInstance } from "../genetics/create-instance.js";
-
-/*
-  globals b2RevoluteJointDef b2Vec2 b2BodyDef b2Body b2FixtureDef b2PolygonShape b2CircleShape
-*/
+import {
+  b2RevoluteJointDef,
+  b2Vec2,
+  b2BodyDef,
+  b2Body,
+  b2FixtureDef,
+  b2PolygonShape,
+  b2CircleShape,
+} from "../lib/box2d.js";
 
 export function defToCar(normal_def, world, constants) {
   var car_def = createInstance.applyTypes(constants.schema, normal_def);
